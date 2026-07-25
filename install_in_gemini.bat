@@ -52,17 +52,20 @@ if exist "!GEM!" (
 >>"!GEM!" echo ^<^^!-- delphi-ai-skills --^>
 >>"!GEM!" echo ## Skills
 >>"!GEM!" echo.
->>"!GEM!" echo Before writing DelphiMVCFramework code, read the relevant skill:
+>>"!GEM!" echo Before writing Delphi or DelphiMVCFramework code, read the relevant skill:
 >>"!GEM!" echo.
+>>"!GEM!" echo - `skills/delphi/SKILL.md` — the language and the RTL: version gating, lifetime, strings, generics, threading
+>>"!GEM!" echo - `skills/delphi-code-smells/SKILL.md` — code review: compiler warnings, static analysis, memory leaks
 >>"!GEM!" echo - `skills/dmvcframework/SKILL.md` — controllers, ActiveRecord, validation, DI, middleware, servers, dotEnv
 >>"!GEM!" echo - `skills/dmvcframework-minimal-api/SKILL.md` — lambda routes, route groups, filters
 >>"!GEM!" echo - `skills/dmvcframework-webapp/SKILL.md` — TemplatePro views, fragments, ViewData
 >>"!GEM!" echo - `skills/dmvcframework-ui/SKILL.md` — Bootstrap 5.3 layout, style.css, dark mode
 >>"!GEM!" echo - `skills/dmvcframework-security/SKILL.md` — REQUIRED for any endpoint taking client input
+>>"!GEM!" echo - `skills/dmvcframework-jsonrpc/SKILL.md` — JSON-RPC 2.0 services and client
 >>"!GEM!" echo - `skills/dmvcframework-testing/SKILL.md` — DUnitX integration tests
 >>"!GEM!" echo - `skills/htmx-skill/SKILL.md` — index of the official htmx.org docs
 >>"!GEM!" echo.
->>"!GEM!" echo Do not write DMVCFramework code from memory: the API names in these files are authoritative.
+>>"!GEM!" echo Do not write Delphi or DMVCFramework code from memory: the API names in these files are authoritative.
 
 echo GEMINI.md updated.
 

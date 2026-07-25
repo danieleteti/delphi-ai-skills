@@ -54,17 +54,20 @@ if exist "!AGENTS!" (
 >>"!AGENTS!" echo ^<^^!-- delphi-ai-skills --^>
 >>"!AGENTS!" echo ## Skills
 >>"!AGENTS!" echo.
->>"!AGENTS!" echo Before writing DelphiMVCFramework code, read the relevant skill:
+>>"!AGENTS!" echo Before writing Delphi or DelphiMVCFramework code, read the relevant skill:
 >>"!AGENTS!" echo.
+>>"!AGENTS!" echo - `skills/delphi/SKILL.md` — the language and the RTL: version gating, lifetime, strings, generics, threading
+>>"!AGENTS!" echo - `skills/delphi-code-smells/SKILL.md` — code review: compiler warnings, static analysis, memory leaks
 >>"!AGENTS!" echo - `skills/dmvcframework/SKILL.md` — controllers, ActiveRecord, validation, DI, middleware, servers, dotEnv
 >>"!AGENTS!" echo - `skills/dmvcframework-minimal-api/SKILL.md` — lambda routes, route groups, filters
 >>"!AGENTS!" echo - `skills/dmvcframework-webapp/SKILL.md` — TemplatePro views, fragments, ViewData
 >>"!AGENTS!" echo - `skills/dmvcframework-ui/SKILL.md` — Bootstrap 5.3 layout, style.css, dark mode
 >>"!AGENTS!" echo - `skills/dmvcframework-security/SKILL.md` — REQUIRED for any endpoint taking client input
+>>"!AGENTS!" echo - `skills/dmvcframework-jsonrpc/SKILL.md` — JSON-RPC 2.0 services and client
 >>"!AGENTS!" echo - `skills/dmvcframework-testing/SKILL.md` — DUnitX integration tests
 >>"!AGENTS!" echo - `skills/htmx-skill/SKILL.md` — index of the official htmx.org docs
 >>"!AGENTS!" echo.
->>"!AGENTS!" echo Do not write DMVCFramework code from memory: the API names in these files are authoritative.
+>>"!AGENTS!" echo Do not write Delphi or DMVCFramework code from memory: the API names in these files are authoritative.
 
 echo AGENTS.md updated.
 

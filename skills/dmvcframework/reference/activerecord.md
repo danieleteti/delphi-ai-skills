@@ -353,7 +353,7 @@ TMVCActiveRecord.SetCurrentUser(Context.LoggedUser.UserName);
 ### Entity actions — restrict auto-CRUD
 
 ```delphi
-// Allow only retrieval; INSERT/UPDATE/DELETE raise EMVCActiveRecordActionNotAllowed
+// Allow only retrieval; INSERT/UPDATE/DELETE raise EMVCActiveRecord ("Action [...] not allowed on entity")
 [MVCEntityActions([eaRetrieve])]
 TReadOnlyCustomer = class(TCustomer)
 end;

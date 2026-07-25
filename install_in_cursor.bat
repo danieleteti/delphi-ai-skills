@@ -41,11 +41,15 @@ echo Skills copied.
 
 if not exist "!RULES!" mkdir "!RULES!" || (echo [ERROR] Could not create "!RULES!". & exit /b 1)
 
+:: NOTE: one line per skill - add a line here when a skill is added to skills\.
+call :rule delphi                    "Delphi / Object Pascal language and RTL - version gating, memory and lifetime, strings, generics, RTTI, threading"
+call :rule delphi-code-smells        "Delphi code review - compiler warnings and hints, static analysis, memory leak detection, code smells"
 call :rule dmvcframework             "DelphiMVCFramework core - controllers, ActiveRecord, validation, DI, middleware, servers, dotEnv"
 call :rule dmvcframework-minimal-api "DelphiMVCFramework Minimal API - lambda routes, route groups, endpoint and HTTP filters"
 call :rule dmvcframework-webapp      "DelphiMVCFramework web app - TemplatePro views, HTMX fragments, ViewData, cookie auth"
 call :rule dmvcframework-ui          "DelphiMVCFramework UI - Bootstrap 5.3 layout, style.css, dark mode, toasts"
 call :rule dmvcframework-security    "DelphiMVCFramework security - access control, mass assignment, SQL injection, XSS, JWT, secrets"
+call :rule dmvcframework-jsonrpc     "DelphiMVCFramework JSON-RPC 2.0 - publishing a service, requests vs notifications, params, errors, the client"
 call :rule dmvcframework-testing     "DelphiMVCFramework testing - DUnitX, in-process IMVCServer, IMVCRESTClient"
 call :rule htmx-skill                "htmx reference - attributes, triggers, swap modifiers, events, headers, extensions"
 

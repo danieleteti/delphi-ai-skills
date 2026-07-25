@@ -3,23 +3,39 @@
 </p>
 
 <p align="center">
-  AI coding-agent <strong>skills</strong> for
+  AI coding-agent <strong>skills</strong> for <strong>Delphi</strong> —
+  the language and the RTL, plus
   <a href="https://github.com/danieleteti/delphimvcframework">DelphiMVCFramework</a>.
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/skills-0.1.0-fbbf24" alt="skills version 0.1.0">
+  <img src="https://img.shields.io/badge/skills-0.3.0-fbbf24" alt="skills version 0.3.0">
+  <img src="https://img.shields.io/badge/Delphi-11%20Alexandria%2B-1a1a1a" alt="Delphi 11 Alexandria and later">
   <img src="https://img.shields.io/badge/DelphiMVCFramework-3.5.0-1a1a1a" alt="targets DelphiMVCFramework 3.5.0">
   <img src="https://img.shields.io/badge/license-Apache--2.0-1a1a1a" alt="Apache 2.0">
 </p>
 
-**Version 0.1.0 — early release.** Written and verified against **DelphiMVCFramework 3.5.0** (`silicon`), but
-not yet battle-tested across many projects: expect rough edges, and please report them.
+**For every Delphi developer, not only the ones using DMVCFramework.** The `delphi` skill is about the
+language itself — what compiles on 11 versus 12 versus 13, object lifetime and `Free`, interfaces and
+reference counting, strings and encodings, exceptions, generics and RTTI, threading, conventions. It assumes
+no framework and applies to any `.pas` file: a VCL form, a service, a legacy unit, a library. If you write
+Delphi and your agent writes Java in Pascal clothing, that skill is the one you want.
+
+Its companion `delphi-code-smells` is for the other half of the job — **reviewing** code rather than writing
+it: the compiler warnings that mean a real bug, hunting a memory leak, and making one fail the build.
+
+Building a server on top of that? Then the seven DMVCFramework skills are already here too — REST
+controllers, Minimal API, TemplatePro web apps, JSON-RPC, security, testing.
 
 A *skill* is a Markdown file your AI agent loads **on demand**, when your request matches it. It teaches the
-agent the framework's real API — exact unit names, attributes, ownership rules, idioms — so it stops
-inventing plausible-but-wrong code. Every API name here was verified against the DelphiMVCFramework sources
-and its sample projects, not written from memory.
+agent the **real** API — exact unit names, signatures, attributes, ownership rules, idioms — so it stops
+inventing plausible-but-wrong code. Every identifier was copied from the shipped Delphi RTL/VCL source and
+the DelphiMVCFramework sources and samples, never written from memory, and a
+[checker](#checking-the-skills-themselves) re-verifies all of them on every change.
+
+**Version 0.3.0 — early release.** Verified against **Delphi 13 Florence's RTL** (targeting **11 Alexandria**
+and later) and **DelphiMVCFramework 3.5.0** (`silicon`), but not yet battle-tested across many projects:
+expect rough edges, and please report them.
 
 Works with Claude Code, Codex, Cursor, Gemini CLI, Windsurf, Continue, and anything else that can read
 Markdown instructions.
@@ -44,14 +60,18 @@ install_in_claude.bat
 That is it for Claude Code: it discovers skills on its own. For the other agents see
 [Installing](#installing) — there is a script for each.
 
-**3. Create your project with the IDE wizard** — the skills add features to a wizard project, they do not
-scaffold one from scratch:
+**3. Start the agent in any Delphi project** and ask. Nothing else to set up: the `delphi` skill needs no
+particular project shape.
+
+> *Why does this unit leak? Fix it.*
+
+**If what you are building is a DMVCFramework server**, there is one more step — the DMVC skills add
+features to a wizard-generated project, they do not scaffold one from scratch:
 
 > **Delphi IDE → File → New → Other → Delphi Projects → DelphiMVCFramework → New DMVCFramework Application**
 
-Pick the preset you need, accept the defaults, compile and run it once.
-
-**4. Start the agent inside the project folder** and ask for what you want:
+Pick the preset you need, accept the defaults, compile and run it once. Then start the agent **inside the
+project folder** and ask for what you want:
 
 > *Add a Customers controller with full CRUD, backed by an ActiveRecord entity on table `customers`*
 
@@ -63,22 +83,29 @@ The agent reads the project, loads the right skills, and writes code against the
 
 | Skill | What it covers | Loads when you… |
 |-------|----------------|-----------------|
+| **`delphi`** | The language itself, no framework assumed: version gating (what compiles on 11 vs 12 vs 13), inline `var`, memory and lifetime, strings and encodings, exceptions, `System.Generics.Collections`, RTTI, threading, naming conventions. | Write or review any Delphi code — it underpins all the others. |
+| **`delphi-code-smells`** | Reviewing code, not writing it: the compiler warnings and hints that mean a real bug, warnings-as-errors, leak detection and how to make a leak fail the build, third-party static analysis, and a catalogue of smells each with a way to find it. | Review, audit or refactor Delphi code — or hunt a leak or an AV. |
 | **`dmvcframework`** | The core: engine bootstrap and the server backends, controllers and functional actions, routing attributes, `IMVCResponse`, object-ownership rules, ActiveRecord ORM, the Repository pattern, the DI service container, validation, middleware, JWT, SSE, dotEnv configuration. | Build a REST API or any server-side feature with controller classes. |
 | **`dmvcframework-minimal-api`** | The Minimal API: lambda routes with no controller class — route groups (`Prefix`, `MapGet`/`MapPost`/`MapMethods`), type-driven parameter binding, records from the query string, file uploads, endpoint filters vs HTTP filters, `.AsWeb` for TemplatePro/HTMX handlers. | Write routes as anonymous methods instead of controller classes — REST *or* web app. |
 | **`dmvcframework-webapp`** | Server-side web apps: TemplatePro templates (inheritance, blocks, filters, partials), fragments, `ViewData` and its ownership rules, cookie/JWT login, static files, the HTMX helpers on the Delphi side. | Render HTML pages and HTMX fragments from Delphi. |
 | **`dmvcframework-ui`** | The presentation layer the wizard generates: Bootstrap 5.3, `baselayout.html` blocks, the brand tokens in `style.css`, dark/light mode via `data-bs-theme`, toasts, the HTMX activity classes. | Write markup or CSS for a DMVCFramework web app. |
 | **`dmvcframework-security`** | Secure coding, with the DMVCFramework API that implements each control: access control and IDOR, mass assignment, SQL injection, XSS in TemplatePro, CSRF, path traversal, uploads, SSRF and open redirect, security headers, JWT hardening, secrets. | Automatically — the server skills require it for any endpoint that takes client input. |
+| **`dmvcframework-jsonrpc`** | JSON-RPC 2.0 services: publishing a controller, which methods are callable, `function` = request vs `procedure` = notification, named and positional parameters, who frees what, error codes, hooks, and the `IMVCJSONRPCExecutor` client. | Expose or consume a JSON-RPC endpoint. |
 | **`dmvcframework-testing`** | Integration and unit tests: an in-process `IMVCServer` + `IMVCRESTClient` + DUnitX; CRUD, authentication and authorization test patterns; database fixtures. | Write tests for a DMVCFramework API. |
 | **`htmx-skill`** | An index of every page of the official htmx.org documentation, each with a description, so the agent fetches and reads the right page instead of recalling htmx from memory. | Ask about any htmx attribute, trigger/swap modifier, event, header or extension. |
 
-They are complementary: the Minimal API and web-app skills assume the core one for entities, validation and
-DI. All four server skills require `dmvcframework-security` for any endpoint that touches untrusted input.
+They are complementary: the Minimal API, web-app and JSON-RPC skills assume the core one for entities,
+validation and DI, and all of them sit on `delphi` for the language itself. Every server skill requires
+`dmvcframework-security` for any endpoint that touches untrusted input.
 The web-app skill delegates markup to `dmvcframework-ui` and htmx syntax to `htmx-skill` rather than
 duplicating either. **Install them all** — the agent picks the right ones on its own.
 
-### Two things the skills insist on
+### Two things the DMVCFramework skills insist on
 
-**1. Start from a wizard project.** The skills do not scaffold a project from scratch. Create it in the IDE,
+Both are about *server* projects. The two Delphi skills have no such rules: they apply to any unit, in any
+project, with no layout requirements at all.
+
+**1. Start from a wizard project.** They do not scaffold a project from scratch. Create it in the IDE,
 accept the defaults, compile it, then `cd` into the folder and start your agent **there**. The skills detect
 the wizard layout (`EngineConfigU.pas`, `RoutesU.pas`, `bin/.env`, …) and add features inside it. If there is
 no project, they stop and tell you to create one rather than inventing a half-correct bootstrap.
@@ -92,9 +119,31 @@ routing, ActiveRecord, validation, DI, middleware) is identical on every backend
 
 ## Prompts that activate each skill
 
-You do not "call" a skill. You describe the task, and the agent matches it against each skill's description.
-The strongest trigger is **naming the framework**: *"create a controller"* is ambiguous, *"create a
-**DMVCFramework** controller"* is not. Once a skill is loaded, the rest of the conversation keeps it.
+You do not normally "call" a skill. You describe the task, and the agent matches it against each skill's
+description. The strongest trigger is **naming the technology**: *"create a controller"* is ambiguous,
+*"create a **DMVCFramework** controller"* is not; *"fix this leak"* is ambiguous, *"fix this leak in my
+**Delphi** unit"* is not. Once a skill is loaded, the rest of the conversation keeps it.
+When you want to be certain, name the skill outright — see [Forcing a skill](#forcing-a-skill).
+
+**`delphi`** — the language and the RTL, no framework assumed. The one skill that applies to *any* `.pas`
+file, so it is listed first: it is what keeps the agent from writing C# in Pascal clothing.
+
+> *Does this unit compile on Delphi 11, or am I using Athens-only syntax?*
+> *Find the memory leak in this unit*
+> *This interface reference causes an access violation on shutdown — why?*
+> *Rewrite this loop with inline `var` and a `for-in`*
+> *Should this be a `TObjectList<T>` with `OwnsObjects` or a plain `TList<T>`?*
+> *Convert this string to UTF-8 bytes and back without mangling it*
+> *This code runs in a thread and touches a VCL label — what is wrong with it?*
+> *Which unit is `IncMonth` in?*
+
+**`delphi-code-smells`** — the review pass, and the leak hunt
+
+> *Review this unit and tell me what is actually wrong with it, not the style*
+> *This service leaks memory over a few days — find it*
+> *Which compiler warnings am I ignoring that mean a real bug?*
+> *Make a memory leak fail the build*
+> *Why does this AV only happen on shutdown?*
 
 **`dmvcframework`** — REST API, ORM, DI, validation
 
@@ -139,10 +188,45 @@ The strongest trigger is **naming the framework**: *"create a controller"* is am
 > *Add a test that a POST with an invalid email returns 422*
 > *Add a test that user B cannot read user A's order*
 
+**`dmvcframework-jsonrpc`** — JSON-RPC 2.0
+
+> *Expose these service methods over JSON-RPC*
+> *Why is my published method not found by the client?*
+> *Call this JSON-RPC endpoint from a Delphi client*
+> *Add a notification method that the client fires without waiting for a result*
+> *Return a proper JSON-RPC error with a custom code instead of a 500*
+> *Who frees the object I return from an RPC method?*
+
 **`htmx-skill`** — htmx reference
 
 > *What does hx-swap="outerHTML swap:1s" actually do?*
 > *Which HTMX event fires after the swap completes?*
+
+### Forcing a skill
+
+Auto-matching is a heuristic. When the task is ambiguous, when the agent already answered from memory, or
+when you simply want the guarantee, name the skill yourself. **Naming it in plain words works on every
+agent** — it is a file the agent can open:
+
+> *Use the `delphi` skill, then review this unit for lifetime bugs.*
+> *Read `skills/dmvcframework-jsonrpc/SKILL.md` first, then expose TOrdersService over JSON-RPC.*
+
+Per agent, the shortest way:
+
+| Agent | Force it with |
+|-------|--------------|
+| **Claude Code** | Type `/` and the skill name — `/delphi`, `/dmvcframework-jsonrpc`. Installed skills show up in the slash-command list. Naming it in the prompt works too. |
+| **Codex** (`AGENTS.md`) | Reference the path: *"Read `skills/delphi/SKILL.md`, then …"*. The `AGENTS.md` section the installer writes tells it the files exist; the path makes it certain. |
+| **Cursor** | `@`-mention the rule or the file: `@dmvcframework` (the `.mdc` rule) or `@skills/delphi/SKILL.md`. |
+| **Gemini CLI** (`GEMINI.md`) | Same as Codex — name the path in the prompt. |
+| **Anything else** | Paste or `@`-attach the `SKILL.md`. Plain Markdown, no tool-specific syntax. |
+
+To keep a skill on for a whole session, put the instruction in your first message: *"For everything in this
+session, follow `skills/delphi/SKILL.md` and `skills/dmvcframework/SKILL.md`."*
+
+Making it permanent for a project: `install_in_claude.bat .` installs into `.claude/skills` so the skills
+travel with the repository, and the `AGENTS.md` / `GEMINI.md` / `.cursor/rules` files the other installers
+write are committed alongside — every agent that opens the project then finds them without being told.
 
 ### Checking it worked
 
@@ -161,13 +245,17 @@ agent without the skill usually says yes, and its code double-frees.
 
 ## Installing
 
-Each skill is a folder under `skills/` with a `SKILL.md` inside. Copy the **whole folder** — the core skill
-has `reference/` files that must sit next to its `SKILL.md`.
+Each skill is a folder under `skills/` with a `SKILL.md` inside. Copy the **whole folder** — `dmvcframework`,
+`dmvcframework-jsonrpc` and `delphi` have `reference/` files that must sit next to their `SKILL.md`, and two
+skills ship `scripts/`.
+
+**Install them all.** They cross-reference each other by name, and the agent loads only what the task needs.
 
 ### The scripts (Windows)
 
 Run them from the folder where you cloned this repo. Each one is safe to re-run: it overwrites the skills and
-never duplicates the section it adds to your instruction file.
+never duplicates the section it adds to your instruction file — the appended block is guarded by an
+`<!-- delphi-ai-skills -->` marker.
 
 | Script | What it does |
 |--------|--------------|
@@ -211,18 +299,24 @@ files exist and when to open them:
 ```markdown
 ## Skills
 
-Before writing DelphiMVCFramework code, read the relevant skill:
+Before writing Delphi or DelphiMVCFramework code, read the relevant skill:
 
+- `skills/delphi/SKILL.md` — the language and the RTL: version gating, lifetime, strings, generics, threading
+- `skills/delphi-code-smells/SKILL.md` — code review: compiler warnings, static analysis, memory leaks
 - `skills/dmvcframework/SKILL.md` — controllers, ActiveRecord, validation, DI, middleware, servers, dotEnv
 - `skills/dmvcframework-minimal-api/SKILL.md` — lambda routes, route groups, filters
 - `skills/dmvcframework-webapp/SKILL.md` — TemplatePro views, fragments, ViewData
 - `skills/dmvcframework-ui/SKILL.md` — Bootstrap 5.3 layout, style.css, dark mode
 - `skills/dmvcframework-security/SKILL.md` — REQUIRED for any endpoint taking client input
+- `skills/dmvcframework-jsonrpc/SKILL.md` — JSON-RPC 2.0 services and client
 - `skills/dmvcframework-testing/SKILL.md` — DUnitX integration tests
 - `skills/htmx-skill/SKILL.md` — index of the official htmx.org docs
 
-Do not write DMVCFramework code from memory: the API names in these files are authoritative.
+Do not write Delphi or DMVCFramework code from memory: the API names in these files are authoritative.
 ```
+
+That is exactly what `install_in_codex.bat` appends, wrapped in the `<!-- delphi-ai-skills -->` marker it
+uses to avoid appending twice.
 
 ### Cursor — by hand
 
@@ -233,16 +327,16 @@ pull it in, and reference the skill file rather than duplicating it:
 
 ```markdown
 ---
-description: DelphiMVCFramework — controllers, ActiveRecord, validation, DI, middleware, servers
-globs: ["**/*.pas", "**/*.dpr"]
+description: DelphiMVCFramework core - controllers, ActiveRecord, validation, DI, middleware, servers, dotEnv
+globs: ["**/*.pas", "**/*.dpr", "**/*.inc", "**/*.html"]
 alwaysApply: false
 ---
 
 @skills/dmvcframework/SKILL.md
 ```
 
-Repeat for the other skills, changing `description` and the `@` path. Keep `alwaysApply: false` so they stay
-out of context until relevant.
+Repeat for the other eight skills, changing `description` and the `@` path. Keep `alwaysApply: false` so they
+stay out of context until relevant — then `@dmvcframework` in the chat pulls one in on demand.
 
 ### Gemini CLI — by hand
 
@@ -267,6 +361,7 @@ responses, ownership, middleware, pitfalls), and the heavy material sits in file
 the task calls for them.
 
 ```
+check.py                          mechanical validation of every skill - see Checking the skills themselves
 install_in_claude.bat             installers - see Installing
 install_in_codex.bat
 install_in_cursor.bat
@@ -287,9 +382,25 @@ skills/
   dmvcframework-webapp/SKILL.md
   dmvcframework-ui/SKILL.md
   dmvcframework-security/SKILL.md
+  dmvcframework-jsonrpc/
+    SKILL.md
+    reference/client.md             IMVCJSONRPCExecutor: calls, notifications, ownership
   dmvcframework-testing/
     SKILL.md
     scripts/run-tests.bat           build and run a DUnitX test project
+  delphi/
+    SKILL.md                        version gating, the core rules, the reference index
+    reference/memory.md             Free/try-finally, interfaces, managed records, ownership
+    reference/strings.md            string vs UTF8String vs TBytes, TEncoding, TStringBuilder
+    reference/exceptions.md         hierarchy, raise..at, re-raise, what not to catch
+    reference/generics-and-rtti.md  Generics.Collections/Defaults, comparers, RTTI, attributes
+    reference/concurrency.md        TThread, Synchronize/Queue, TTask, TParallel, the VCL rule
+    reference/style.md              docwiki style guide vs community guide vs house style
+  delphi-code-smells/
+    SKILL.md                        order of attack for a review, the ranked defect table
+    reference/static-analysis.md    verified warning/hint codes, $WARN, warnings-as-errors, the tools
+    reference/leaks.md              the shipped memory manager, reading a leak report, failing a build on one
+    reference/smells.md             the catalogue: bad code, what breaks, the fix, how to detect it
   htmx-skill/SKILL.md
 ```
 
@@ -311,7 +422,7 @@ re-running the same task to confirm the agent gets it right.
 
 | | |
 |---|---|
-| **Skills version** | **0.1.0** (pre-1.0) |
+| **Skills version** | **0.3.0** (pre-1.0) |
 | **Targets DelphiMVCFramework** | **3.5.0** (`silicon`) |
 | Delphi | The framework supports 10 Seattle and later; the wizard projects these skills assume target 11 Alexandria or later |
 
@@ -337,7 +448,45 @@ wins**, and the skill has a bug.
 **Pointing the agent at your checkout up front makes it sharper.** If you have the framework on disk, say so:
 *"the DMVCFramework sources are in C:\DEV\dmvcframework"*.
 
+### Checking the skills themselves
+
+```bash
+python check.py
+```
+
+Verifies, in about five seconds and with no dependencies: every frontmatter still loads (under 1024
+characters, `name` matching the folder), every `reference/` file and sibling skill named actually exists,
+**every Delphi identifier in the prose exists in the sources**, and every skill is listed in the installers
+and in this README. It exits non-zero on the first defect, so it fits a pre-commit hook or CI.
+
+It reads `C:\DEV\dmvcframework` and your Delphi `source\` tree — override with `DMVC_HOME` and
+`DELPHI_SOURCE`. Without either it still runs, and skips the identifier check rather than failing.
+
+It proves a name *exists*, not that it is used correctly: a real API called with the wrong arguments needs a
+compiler, and an ownership bug needs to be run. See CLAUDE.md for the two levels above this one.
+
 ### Changelog
+
+**0.3.0** — `delphi-code-smells`: the review pass. Compiler warnings and hints that indicate a real bug —
+every code produced by running `dcc32` rather than recalled — `$WARN` and warnings-as-errors, leak detection
+with the shipped memory manager, how to read a leak report and how to make a leak fail the build, an honest
+note on the third-party analysers, and a catalogue of smells where every entry says how to *find* it. Also
+corrected two claims in `delphi`, `reference/memory.md`: the shutdown report names classes only for small
+blocks, and it does nothing at all in a module that shares another module's memory manager.
+
+**0.2.0** — two skills added, nine in total.
+
+- **`delphi`** — the language and the RTL, no framework assumed: version gating (what compiles on 11 vs 12 vs
+  13), memory and lifetime, strings and encodings, exceptions, generics and RTTI, threading, conventions.
+  Identifiers taken from the shipped RTL/VCL source; version boundaries checked against the docwiki release
+  by release. Six `reference/` files.
+- **`dmvcframework-jsonrpc`** — JSON-RPC 2.0: publishing a service, `function` = request vs `procedure` =
+  notification, named and positional parameters, the three ownership rules, error codes, hooks, and the
+  `IMVCJSONRPCExecutor` client.
+- Fixes in the existing skills: a wrong exception name in the ActiveRecord reference, a duplicated project
+  layout that contradicted the wizard-first rule, a DB test example that could not have worked as written.
+- `check.py` — mechanical validation of the whole set: frontmatter, links, identifiers against the sources,
+  installer and README coverage.
 
 **0.1.0** — first public release. Seven skills, every API name verified against the DelphiMVCFramework 3.5.0
 sources and samples.

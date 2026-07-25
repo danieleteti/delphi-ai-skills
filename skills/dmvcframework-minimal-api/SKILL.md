@@ -27,6 +27,8 @@ If you still cannot verify it, **say so**. Where a skill and a sample disagree, 
 
 Delphi 11 Alexandria or later — inline `var` declarations and `for var` loops are fine, and this skill's
 examples use them. Do not use Delphi 13 Florence-only syntax (`NameOf`, inline `if` expressions).
+For the language and the RTL themselves — version gating, lifetime, strings, generics, threading — load the
+**`delphi`** skill.
 
 ## When to use
 

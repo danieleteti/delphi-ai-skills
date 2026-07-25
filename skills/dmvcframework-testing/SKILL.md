@@ -389,7 +389,9 @@ DELETE is still a breach.
 ## 8. Database-backed tests
 
 For tests that need a real database, configure FireDAC in `[SetupFixture]`
-before starting the listener.
+**before** starting the server, and register `TMVCActiveRecordMiddleware.Create('TestConn')` on the engine
+(add it in `StartTestServer`, §2) — without it no connection is bound to the request and every ActiveRecord
+call fails.
 
 ```delphi
 [TestFixture]
@@ -463,7 +465,7 @@ end;
 procedure TMyResourceDBTests.Create_And_Retrieve_RoundTrip;
 var
   lCreateResp, lGetResp: IMVCRESTResponse;
-  lJSON: TJsonObject;
+  lJSON: TJDOJsonObject;
   lLocation: string;
   lID: Integer;
 begin
@@ -699,6 +701,5 @@ Add `initialization TDUnitX.RegisterTestFixture(TMyTests);` at the bottom of eac
 | `MVCFramework.RESTClient` | `TMVCRESTClient` |
 | `MVCFramework.RESTClient.Intf` | `IMVCRESTClient`, `IMVCRESTResponse` |
 | `MVCFramework.Commons` | `HTTP_STATUS`, `TMVCMediaType` |
-| `MVCFramework.Serializer.JsonDataObjects` | `TMVCJsonDataObjectsSerializer` |
-| `JsonDataObjects` | `TJsonObject`, `TJsonArray`, `TJsonDataType` |
-| `MVCFramework.Serializer.JsonDataObjects` | `TJSONUtils.JSONArrayToListOf<T>` |
+| `MVCFramework.Serializer.JsonDataObjects` | `TMVCJsonDataObjectsSerializer`, `TJSONUtils.JSONArrayToListOf<T>` |
+| `JsonDataObjects` | `TJsonObject`, `TJsonArray` — and their aliases `TJDOJsonObject` / `TJDOJsonArray`, which is what `ToJSONObject` / `ToJSONArray` return |

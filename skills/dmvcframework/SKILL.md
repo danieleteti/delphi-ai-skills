@@ -57,6 +57,10 @@ NameOf(MyField)                           // NameOf operator — not available y
 var x := if Condition then A else B;      // inline if expression — not available yet
 ```
 
+For the language itself — what compiles on which release, object lifetime and `Free`/interfaces, strings and
+encodings, generics, RTTI, threading — load the **`delphi`** skill. It assumes no framework and is the
+foundation this one sits on.
+
 ---
 
 **REQUIRED REFERENCE — `dmvcframework-security`.** Any endpoint that accepts input from a client (body,
@@ -207,23 +211,6 @@ Related skills: **`dmvcframework-minimal-api`** (lambda routes, no controller cl
 
 ---
 
-## Project Structure (recommended)
-
-```
-MyProject/
-├── MyProject.dpr              # Boot + RunServer (Indy Direct). A WebModule here = WebBroker/ISAPI/Apache
-├── EngineConfigU.pas          # ConfigureEngine() — controllers + middleware registration
-├── Controllers/
-│   └── Controllers.XXX.pas    # Feature controllers (inherit TMVCController directly)
-├── Entities/
-│   └── Entities.XXX.pas       # ActiveRecord models + plain DTO classes
-├── Services/                  # Optional: business logic layer
-└── Config/
-    └── FDConnectionConfig.pas # FireDAC connection definitions
-```
-
----
-
 ## Controller Scaffolding — Functional Actions
 
 **RULE: every controller action is a `function`. Never write `procedure SomeAction; begin Render(...); end;`.**
@@ -328,13 +315,9 @@ end;
 
 function TMyResourceController.Delete(id: Integer): IMVCResponse;
 begin
-  TMVCActiveRecord.CurrentConnection.StartTransaction;
-  try
+  begin
+    var Ctx := TMVCActiveRecord.UseTransactionContext;   // commits on exit, rolls back on exception
     ToFree(TMVCActiveRecord.GetByPk<TMyResource>(id)).Delete;
-    TMVCActiveRecord.CurrentConnection.Commit;
-  except
-    TMVCActiveRecord.CurrentConnection.Rollback;
-    raise;
   end;
   Result := NoContentResponse;
 end;
@@ -746,7 +729,7 @@ In `EngineConfigU.pas`: add `uses Controllers.Products;` and
 |------|---------|
 | `MVCFramework` | Core: `TMVCController`, `TMVCEngine`, attributes, `IMVCResponse` |
 | `MVCFramework.Commons` | `TMVCMediaType`, `TMVCHTTPMethodType`, `HTTP_STATUS` |
-| `MVCFramework.ActiveRecord` | `TMVCActiveRecord`, all class-level CRUD methods |
+| `MVCFramework.ActiveRecord` | `TMVCActiveRecord` and its class-level CRUD; also `ActiveRecordConnectionsRegistry`, `TMVCActiveRecordBackEnd`, `loIgnoreNotExistentFields`, `TMVCActiveRecordList` |
 | `MVCFramework.Nullables` | `NullableInt32/64/String/Boolean/TDate/TDateTime/Currency` |
 | `MVCFramework.Serializer.Commons` | `[MVCNameCase]`, `[MVCNameAs]`, `[MVCDoNotSerialize]`, etc. |
 | `MVCFramework.Validation` | `TMVCValidatable`, `EMVCValidationException`, `EMVCStorageValidationException` |
@@ -758,7 +741,6 @@ In `EngineConfigU.pas`: add `uses Controllers.Products;` and
 | `MVCFramework.Middleware.JWT` | `TMVCJWTAuthenticationMiddleware` |
 | `MVCFramework.DataSet.Utils` | Dataset → JSON helpers |
 | `MVCFramework.Container` | `IMVCServiceContainer`, DI registration |
-| `MVCFramework.ActiveRecord` | Also exports: `ActiveRecordConnectionsRegistry`, `TMVCActiveRecordBackEnd`, `loIgnoreNotExistentFields`, `TMVCActiveRecordList` |
 | `MVCFramework.SQLGenerators` | SQL generators (needed for some SQL customization) |
 
 ---

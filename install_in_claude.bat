@@ -40,7 +40,7 @@ if not exist "!DEST!" mkdir "!DEST!" || (echo [ERROR] Could not create "!DEST!".
 xcopy "%SRC%\*" "!DEST!\" /E /I /Y >nul || (echo [ERROR] Copy failed. & exit /b 1)
 
 echo Installed:
-for /d %%S in ("!DEST!\dmvcframework*" "!DEST!\htmx-skill") do echo   - %%~nxS
+for /d %%S in ("%SRC%\*") do echo   - %%~nxS
 echo.
 echo Done. Start Claude Code and ask, for example:
 echo   "Create a DMVCFramework REST controller for Customers with full CRUD"
