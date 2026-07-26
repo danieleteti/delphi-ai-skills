@@ -40,6 +40,10 @@ expect rough edges, and please report them.
 Works with Claude Code, Codex, Cursor, Gemini CLI, Windsurf, Continue, and anything else that can read
 Markdown instructions.
 
+📝 **Articles about this project** — release announcements, worked sessions and the reasoning behind the
+rules — are collected on the author's blog:
+**[danieleteti.it/tags/delphi-ai-skills](https://www.danieleteti.it/tags/delphi-ai-skills/)**.
+
 ---
 
 ## Quick start
