@@ -18,20 +18,68 @@ official docwiki. Version boundaries were checked release by release, not recall
 A plausible-but-wrong RTL identifier costs the user a compile error and their trust. Do not answer from
 memory. Verify, in this order:
 
-1. **Read the shipped source.** It is on every developer machine:
+1. **Read the shipped source — the tree of the release you are targeting.** It is on every developer
+   machine, one tree per installed release:
    ```
    C:\Program Files (x86)\Embarcadero\Studio\<n>.0\source\rtl\sys\      System.pas, System.SysUtils.pas, System.Types.pas
    C:\Program Files (x86)\Embarcadero\Studio\<n>.0\source\rtl\common\   System.Classes.pas, System.Generics.*, System.IOUtils.pas,
                                                                        System.Rtti.pas, System.Threading.pas, System.JSON.pas, …
    C:\Program Files (x86)\Embarcadero\Studio\<n>.0\source\vcl\          Vcl.Forms.pas, Vcl.Controls.pas, …
    ```
-   `<n>` is the product version: **37** = 13 Florence, **23** = 12 Athens, **22** = 11 Alexandria.
-   Ask the user for the path if the folder is not there — do not guess the version.
+   `<n>` is the product version: **37** = 13 Florence, **23** = 12 Athens, **22** = 11 Alexandria. The
+   layout is identical in every tree, so targeting 12 Athens means reading
+   `…\Studio\23.0\source\rtl\common\System.Classes.pas`, not the 37.0 copy of the same file.
+
+   **Which tree matters.** The RTL grows release by release: a type, an overload or a parameter that is in
+   the 13 Florence source may simply not exist in 12 Athens or 11 Alexandria. Once the target is known
+   (see *Establish the target*, below), verify against **that** tree. When the target's tree is not
+   installed — you are on 13 Florence but writing for a customer's 12 Athens — check the symbol against
+   the matching docwiki (step 2), which is versioned, and say which release you confirmed it on.
+
+   Ask the user for the path if no `Studio\<n>.0\source` folder is there — do not guess the version.
 2. **The docwiki**, always current: https://docwiki.embarcadero.com/RADStudio/Florence/en/Delphi_Language_Reference ·
    library reference at https://docwiki.embarcadero.com/Libraries/Florence/en/ (swap `Florence` for
    `Athens` / `Alexandria` to check whether something existed on an older target).
 3. **If you cannot verify it, say so.** "I am not sure `TFoo.Bar` exists — check `System.Classes.pas`" is a
    useful answer. A confidently wrong one is not.
+
+### A declaration is half the answer — read a real call site too
+
+The declaration gives you the arity and the types. A **call site** gives you the ownership, the lifetime,
+the required order of calls and the idiom, which is where plausible-but-wrong code actually dies. Before
+writing or judging a call, read both: the unit that declares the API, and one real use of it. In order of
+value:
+
+1. **The user's own code in this project.** It carries the house conventions you must match, and it is the
+   codebase the answer has to live in.
+2. **The shipped RTL/VCL source itself** — the RTL uses its own APIs constantly, so a `grep` for the
+   identifier across `…\source\` returns working call sites, not documentation prose.
+3. **The docwiki code examples** for that page.
+
+Never present a shape you have not seen used somewhere. If you have only the declaration, say that the
+usage is unverified.
+
+### Ask for the path, then record it so nobody asks twice
+
+When it is not obvious which tree to read, ask rather than assume:
+
+> Which Delphi source tree should I verify against? I can see `Studio\23.0\source` and
+> `Studio\37.0\source`, and I do not want to confirm a signature on a release you do not build with.
+
+Once the user answers and you have confirmed the folder exists, **offer to write it down**, so the next
+session starts knowing it. Ask first, then add a block of its own to the instruction file this agent
+already reads (`CLAUDE.md` in the project root, or `AGENTS.md` / `GEMINI.md`):
+
+```markdown
+<!-- delphi-local-sources -->
+Delphi RTL/VCL source: C:\Program Files (x86)\Embarcadero\Studio\23.0\source   (12 Athens, CompilerVersion 36.0)
+DelphiMVCFramework checkout: C:\DEV\dmvcframework   (sources/ + samples/)
+<!-- /delphi-local-sources -->
+```
+
+**Read that block before asking anything**: it is the first place to look when a session starts. Keep it
+current: if a path in it no longer exists, or the user moves to another Delphi release, say so and ask
+again instead of quietly falling back to memory.
 
 ---
 
@@ -47,6 +95,32 @@ Feature availability is the single most common source of "it looks fine and does
 | **11 Alexandria** | **35.0** | `VER350` | 22.0 |
 | 12 Athens | 36.0 | `VER360` | 23.0 |
 | 13 Florence | 37.0 | `VER370` | 37.0 |
+
+### Establish the target before writing anything version-dependent
+
+Do not assume a version, and do not scatter guards for versions the user does not have. Work down this
+list and stop at the first step that answers:
+
+1. **The user stated it in this session.** That wins over anything on disk. Remember it for the rest of
+   the conversation.
+2. **Ask the compiler.** What it prints *is* the `CompilerVersion` from the table above:
+   ```
+   > "C:\Program Files (x86)\Embarcadero\Studio\37.0\bin\dcc32.exe" --version
+   dcc (Embarcadero Delphi for Windows) 37.0
+   ```
+3. **List the installs** and read the folder numbers: `dir "C:\Program Files (x86)\Embarcadero\Studio"`.
+   `22.0` = 11 Alexandria, `23.0` = 12 Athens, `37.0` = 13 Florence. Careful: the folder number is *not*
+   the compiler version for 12 Athens (folder `23.0`, compiler `36.0`).
+4. **Ask the user** when more than one is installed, when none is found, or when the project does not say:
+   > *Which Delphi do you build this with: 11 Alexandria, 12 Athens or 13 Florence?*
+
+   Do **not** infer it from the `.dproj`: `<ProjectVersion>` is the project-file format version, not the
+   product, and a project last saved by an older IDE opens unchanged in a newer one.
+5. **No answer available: write for 11 Alexandria**, guard anything newer with
+   `{$IF CompilerVersion >= …}`, and say in your reply that you did so and why.
+
+Then *use* what you found. On a confirmed 13 Florence target the `if`-expression and `NameOf` are simply
+available, and wrapping them in a `{$IF}` is noise; on 11 they must not appear at all.
 
 **The DMVCFramework skills in this repository target Delphi 11 Alexandria as the minimum. Unless the user
 states a higher target, write code that compiles on 11.**

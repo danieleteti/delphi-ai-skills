@@ -38,6 +38,25 @@ Verify, in this order:
 The samples are the best documentation of *usage*: they compile, they run, and they are maintained with the
 framework. When a skill and a sample disagree, **the sample wins** — and the skill has a bug worth reporting.
 
+**A signature is half the answer.** `sources/` tells you the arity and the types; a sample tells you the
+ownership, who frees what, the order of the calls and the idiom — which is where generated code actually
+breaks. Read both before writing a call you have not written before, and prefer the project's own existing
+controllers as the third input: they carry the conventions this codebase already follows.
+
+**Record the path instead of asking every session.** Once the user gives you the checkout path and you have
+confirmed it exists, offer to write it into the instruction file this agent already reads (`CLAUDE.md` in the
+project root, or `AGENTS.md` / `GEMINI.md`). Ask first, then keep it in a block of its own:
+
+```markdown
+<!-- delphi-local-sources -->
+DelphiMVCFramework checkout: C:\DEV\dmvcframework   (sources/ + samples/)
+Delphi RTL/VCL source: C:\Program Files (x86)\Embarcadero\Studio\23.0\source   (12 Athens, CompilerVersion 36.0)
+<!-- /delphi-local-sources -->
+```
+
+Look for that block **before** asking. If a path in it no longer exists, say so and ask again rather than
+falling back to memory. The `delphi` skill documents the same block, and the two share it.
+
 ---
 
 ## Delphi Language Target

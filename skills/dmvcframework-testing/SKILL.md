@@ -16,6 +16,11 @@ tests start and stop the server in `[SetupFixture]`/`[TeardownFixture]`.
 > tests against it: build a `TMVCEngine`, host it with `TMVCServerFactory.CreateIndyDirect`, and you
 > need no WebModule at all.
 
+**Verify signatures against real code, not memory** — the DUnitX and DMVCFramework units on disk, plus one
+existing test as the call site. When you do not know where those sources are, ask the user for the path and
+record it as the `dmvcframework` skill describes (the `<!-- delphi-local-sources -->` block in `CLAUDE.md` /
+`AGENTS.md`), so the question is asked once per project and not once per session.
+
 Reference test files in the official repository:
 - `unittests/general/TestClient/LiveServerTestU.pas`
 - `unittests/general/TestClient/ActiveRecordControllerTestU.pas`
