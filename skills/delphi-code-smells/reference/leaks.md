@@ -216,7 +216,9 @@ type
 //     TestMemoryAllocated returns fPostTest - fPreTest.  Same for setup and teardown.
 //     GetMemoryAllocated is the AllocatedBytes function in section 3.
 
-// in the .dpr, before creating the runner:
+// in the .dpr, before creating the runner.
+// The container class was RENAMED between releases - see the note below:
+//   13 Florence: TDUnitXServiceLocator     12 Athens: TDUnitXIoC
 TDUnitXServiceLocator.DefaultContainer.RegisterType<IMemoryLeakMonitor>(
   function: IMemoryLeakMonitor
   begin
@@ -225,7 +227,16 @@ TDUnitXServiceLocator.DefaultContainer.RegisterType<IMemoryLeakMonitor>(
 ```
 
 (The `RegisterType<>` call is copied verbatim from the initialization section of
-`DUnitX.MemoryLeakMonitor.FastMM4.pas`.) If instead your project compiles the DUnitX units from source, the
+`DUnitX.MemoryLeakMonitor.FastMM4.pas`.)
+
+**Check the container's name against the release you build with** (and if you do not know where that
+release's sources are, ask the user for the path and record it as the `delphi` skill describes, in the
+`<!-- delphi-local-sources -->` block). The DUnitX shipped with 13 Florence
+declares `TDUnitXServiceLocator` in `DUnitX.ServiceLocator.pas`; the one shipped with 12 Athens declares
+`TDUnitXIoC` in `DUnitX.IoC.pas`. `DefaultContainer.RegisterType<>` is called identically in both, so only
+the class name changes. Both were read from `DUnitX.MemoryLeakMonitor.FastMM4.pas` in the two trees. On any
+other release, grep that same file in your own `Studio\<n>.0\source\DunitX\` instead of trusting either
+name. If instead your project compiles the DUnitX units from source, the
 one-line alternative is to define `USE_FASTMM4_LEAK_MONITOR` and add
 `DUnitX.MemoryLeakMonitor.FastMM4` to the `.dpr`'s `uses`.
 

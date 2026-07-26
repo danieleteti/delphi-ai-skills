@@ -25,11 +25,16 @@ SKILLS = os.path.join(REPO, 'skills')
 # Source trees searched for identifiers. Missing tree => that check is skipped, not failed,
 # so this still runs on a machine without Delphi installed.
 DMVC = os.environ.get('DMVC_HOME', r'C:\DEV\dmvcframework')
-STUDIO = os.environ.get('DELPHI_SOURCE') or next(
-    iter(sorted(glob.glob(r'C:\Program Files (x86)\Embarcadero\Studio\*\source'), reverse=True)), '')
+# Every installed release, newest first: an identifier is accepted if it exists in any of them,
+# because the skills document 11 Alexandria through 13 Florence and the RTL differs between them
+# (TDUnitXIoC on 12 Athens is TDUnitXServiceLocator on 13 Florence). DELPHI_SOURCE overrides the
+# lookup and takes a ';'-separated list.
+STUDIO_TREES = [p for p in (os.environ.get('DELPHI_SOURCE') or '').split(';') if p] or \
+    sorted(glob.glob(r'C:\Program Files (x86)\Embarcadero\Studio\*\source'), reverse=True)
 
 SOURCE_DIRS = [os.path.join(DMVC, d) for d in ('sources', 'samples', 'ideexpert', 'lib')] + \
-              [os.path.join(STUDIO, d) for d in ('rtl', 'vcl', 'data', 'DunitX', 'internet') if STUDIO]
+              [os.path.join(s, d) for s in STUDIO_TREES
+               for d in ('rtl', 'vcl', 'data', 'DunitX', 'internet')]
 
 # Skills whose prose is not Delphi at all.
 NO_DELPHI = {'htmx-skill'}
