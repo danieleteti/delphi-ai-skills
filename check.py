@@ -7,6 +7,7 @@ Exits non-zero if anything is wrong. What it proves and what it does not:
   - links              every reference/ file and sibling skill named actually exists
   - identifiers        every Delphi identifier in the prose exists in the sources
   - coverage           every skill is listed in the installers and the README
+  - version line       skills/VERSION (major.minor) matches what the core SKILL.md tells the agent
 
 An identifier that exists is not an identifier used correctly: this catches
 `TCORSMiddleware` (invented), not `Result := ToFree(x)` (real names, double free).
@@ -172,6 +173,19 @@ def check_identifiers(name, tokens, declared):
             fail(os.path.relpath(path, REPO), '%s is in no source tree - invented?' % ident)
 
 
+def check_version_line():
+    # skills/VERSION is the DMVC line this branch targets (one branch per major.minor: dmvc-3.5, ...);
+    # the core SKILL.md states the same line to the agent, and the two must not drift apart.
+    path = os.path.join(SKILLS, 'VERSION')
+    if not os.path.exists(path):
+        return fail('skills/VERSION', 'missing - it names the DelphiMVCFramework line, e.g. 3.5')
+    line = read(path).strip()
+    if not re.match(r'^\d+\.\d+$', line):
+        return fail('skills/VERSION', '%r is not major.minor' % line)
+    if '**DelphiMVCFramework %s.x**' % line not in read(os.path.join(SKILLS, 'dmvcframework', 'SKILL.md')):
+        fail('skills/dmvcframework/SKILL.md', 'does not say it targets DelphiMVCFramework %s.x (skills/VERSION)' % line)
+
+
 def check_coverage(names):
     targets = {
         'install_in_codex.bat': 'skills/%s/SKILL.md',
@@ -194,6 +208,7 @@ def main():
         check_frontmatter(name)
         check_links(name, names)
     check_coverage(names)
+    check_version_line()
 
     tokens = load_source_tokens()
     if tokens is None:

@@ -11,7 +11,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/skills-0.3.0-fbbf24" alt="skills version 0.3.0">
   <img src="https://img.shields.io/badge/Delphi-11%20Alexandria%2B-1a1a1a" alt="Delphi 11 Alexandria and later">
-  <img src="https://img.shields.io/badge/DelphiMVCFramework-3.5.0-1a1a1a" alt="targets DelphiMVCFramework 3.5.0">
+  <img src="https://img.shields.io/badge/DelphiMVCFramework-3.5.x-1a1a1a" alt="targets DelphiMVCFramework 3.5.x">
   <img src="https://img.shields.io/badge/license-Apache--2.0-1a1a1a" alt="Apache 2.0">
 </p>
 
@@ -427,10 +427,24 @@ re-running the same task to confirm the agent gets it right.
 | | |
 |---|---|
 | **Skills version** | **0.3.0** (pre-1.0) |
-| **Targets DelphiMVCFramework** | **3.5.0** (`silicon`) |
-| Delphi | The framework supports 10 Seattle and later; the wizard projects these skills assume target 11 Alexandria or later |
+| **Targets DelphiMVCFramework** | **3.5.x** (`silicon`) — branch `dmvc-3.5` |
+| Delphi | The framework supports 10.2 Tokyo and later; the wizard projects these skills assume target 11 Alexandria or later |
 
 The skills version is independent of the framework's.
+
+**One branch per framework line.** The skills follow DelphiMVCFramework's *major.minor*, not its patch level:
+the same skills serve 3.5.0 and 3.5.1, never 3.6.0. Each line has its own branch — `dmvc-3.5`, then
+`dmvc-3.6` — created from `main` when that framework release ships, and afterwards it receives corrections
+only. `main` is the line in development. `skills/VERSION` names the line a checkout targets, and the core
+skill tells the agent to warn you when your project is on a different one.
+
+To stay on your line, install from its branch, not from `main`:
+
+```batch
+git clone -b dmvc-3.5 https://github.com/danieleteti/delphi-ai-skills.git
+```
+
+or download `https://github.com/danieleteti/delphi-ai-skills/archive/refs/heads/dmvc-3.5.zip`.
 
 **While on 0.x**, treat the shape of the skill set as unsettled: skills may be split, merged, renamed or
 dropped between minor versions as real use shows what actually helps. 1.0.0 will follow once the set has

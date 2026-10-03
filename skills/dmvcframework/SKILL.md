@@ -12,7 +12,10 @@ Official repo: https://github.com/danieleteti/delphimvcframework
 
 ## When in doubt about an API — verify it, never guess
 
-These skills are verified against a specific DelphiMVCFramework release (see the repository's README). If you
+These skills target **DelphiMVCFramework 3.5.x**. Before writing code, check the project's version
+(`DMVCFRAMEWORK_VERSION` in the framework's `sources/dmvcframeworkbuildconsts.inc`, or the version the
+project's `AGENTS.md` / `CLAUDE.md` states): if its major.minor is not 3.5, tell the user that these skills
+describe a different release and that names may have changed. If you
 need a signature they do not cover, or you suspect the framework has moved on, **do not invent a name and do
 not answer from memory** — a plausible-but-wrong identifier costs the user a compile error and their trust.
 

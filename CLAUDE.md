@@ -140,7 +140,20 @@ Test an installer against a scratch directory before shipping it — cmd.exe esc
 
 ## Versioning
 
-Currently **0.2.0**, pre-1.0: the shape of the skill set is explicitly unsettled, and skills may be split,
+Currently **0.3.0**, pre-1.0: the shape of the skill set is explicitly unsettled, and skills may be split,
 merged or renamed between minor versions. The skills version is independent of the framework's; the README
 states which DelphiMVCFramework release the content was verified against. Update both when content changes
 materially.
+
+**Branches follow the framework's major.minor.** `main` is the line in development; `dmvc-3.5`, `dmvc-3.6`, …
+are cut from `main` when that framework release ships and then take **corrections only** (an API described
+wrongly), cherry-picked from `main` — never new skills or coverage. The DMVC IDE wizard downloads
+`archive/refs/heads/dmvc-<major>.<minor>.zip`, so a branch's head is what users of that line get: never
+force-push one, and never merge `main` into it.
+
+- `skills/VERSION` holds the line (`3.5`); the core `SKILL.md` states the same line to the agent
+  (`**DelphiMVCFramework 3.5.x**`). `check.py` fails if they disagree. When cutting a new line on `main`, bump
+  both.
+- On a line branch, run `check.py` against **that** release's sources, not the current checkout:
+  `DMVC_HOME=<a checkout of the 3.5 tag> python check.py`. Against a newer framework it would accept names
+  the line does not have.
