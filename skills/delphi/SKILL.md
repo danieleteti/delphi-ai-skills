@@ -155,8 +155,9 @@ var lSql := '''                           // multiline string literal
 - String literals may exceed 255 characters (they were `ShortString`-limited before).
 - `NativeInt` became a *weak alias* — it stopped being a distinct type for overload resolution.
 - `System.Generics.Collections`, `System.Generics.Defaults` and `System.Classes.TList` switched every index
-  and `Count` from `Integer` to `NativeInt`. Code that declares `var lCount: Integer := MyList.Count;`
-  still compiles; code that passes `Count` to a `var Integer` parameter does not.
+  and `Count` from `Integer` to `NativeInt`. `var lCount: Integer := MyList.Count;` still compiles. A
+  `NativeInt` variable passed to a `var Integer` parameter compiles on Win32 and fails on Win64, where the
+  two types differ in size — declare it `NativeInt`.
 
 ### Delphi 13 Florence only — do NOT use on an 11 or 12 target
 
@@ -170,8 +171,8 @@ TFoo<T: interface> / TFoo<T: unmanaged>   // new generic constraints
 {$PUSHOPT} {$POPOPT}
 ```
 
-`THashSet<T>` and `TOrderedDictionary<K,V>` are **not in Delphi 11** (no docwiki page under
-`Libraries/Alexandria`). They exist in 13. Verify before using them on a 12 target.
+`THashSet<T>`, `TObjectHashSet<T>` and `TOrderedDictionary<K,V>` are **not in Delphi 11** (no docwiki page
+under `Libraries/Alexandria`). They exist in 12 Athens and 13 Florence (`System.Generics.Collections`).
 
 Gate anything version-dependent explicitly, never by hoping:
 

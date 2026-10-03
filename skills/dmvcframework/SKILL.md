@@ -309,7 +309,7 @@ end;
 function TMyResourceController.Create(const [MVCFromBody] Resource: TMyResource): IMVCResponse;
 begin
   Resource.Insert;
-  Result := CreatedResponse('/myresources/' + Resource.ID.ToString);
+  Result := CreatedResponse('/myresources/' + Resource.ID.Value.ToString);  // ID: NullableInt64
 end;
 
 function TMyResourceController.Update(const id: Integer;
@@ -318,8 +318,15 @@ var
   lExisting: TMyResource;
 begin
   lExisting := TMVCActiveRecord.GetByPk<TMyResource>(id);
-  lExisting.Assign(Resource);
-  lExisting.Update;
+  try
+    // TMVCActiveRecord.Assign does nothing: copy the fields (or override Assign in the entity)
+    lExisting.Name := Resource.Name;
+    // copy the other fields...
+    lExisting.Update;
+  except
+    lExisting.Free;
+    raise;
+  end;
   Result := OKResponse(lExisting);                  // response owns and frees it
 end;
 
@@ -512,7 +519,7 @@ end;
 function Create(const [MVCFromBody] Resource: TMyResource): IMVCResponse;
 begin
   Resource.Insert;
-  Result := CreatedResponse('/myresources/' + Resource.ID.ToString);
+  Result := CreatedResponse('/myresources/' + Resource.ID.Value.ToString);  // ID: NullableInt64
 end;
 ```
 
@@ -730,7 +737,7 @@ In `EngineConfigU.pas`: add `uses Controllers.Products;` and
 
 - **Never `procedure + Render(...)`** — use `function` returning data or `IMVCResponse` factory methods
 - **Double free** — the framework frees the returned object. `Result := ToFree(x)` and `OKResponse(ToFree(x))` free it twice. `ToFree` is for objects you do NOT return
-- **`[MVCOwned]`** — marks a child list for lifecycle management by the parent entity; do not free manually
+- **`[MVCOwned]`** — a deserialization hint only (create the child when the JSON has it, free it when the JSON is `null`). It does not create or free anything else: the entity still creates the child list in its constructor and frees it in its destructor (`reference/activerecord.md`, Master-Detail)
 - **Nullable fields** — `NullableInt64`, `NullableString`, etc. from `MVCFramework.Nullables`; always check `.HasValue` before `.Value`
 - **Transactions** — `TMVCActiveRecordMiddleware` opens a connection per request but does NOT auto-commit; wrap multi-step mutations in `StartTransaction/Commit/Rollback`
 - **CORS order** — add `TMVCCORSMiddleware` BEFORE JWT/Basic so `OPTIONS` preflight is served without auth

@@ -196,7 +196,8 @@ the shipped FastMM4 monitor:
 
 ```delphi
 uses
-  System.Classes, DUnitX.TestFramework, DUnitX.ServiceLocator;
+  System.Classes, DUnitX.TestFramework,
+  DUnitX.ServiceLocator;   // 13 Florence. On 12 Athens the unit is DUnitX.IoC - see the note below
 
 type
   TLeakMonitor = class(TInterfacedObject, IMemoryLeakMonitor)

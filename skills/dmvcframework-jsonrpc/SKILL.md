@@ -337,8 +337,14 @@ raise EMVCJSONRPCError.CreateFmt(JSONRPC_USER_ERROR + 3, 'Customer %d is locked'
 
 An object passed as `Data` is **freed by the framework** (`TJSONRPCResponseError.Destroy`). Do not free it.
 
-Any other exception that escapes an RPC method is caught and returned as an error with code `0` and the
-exception message (plus the class name in `data`), unless the endpoint has an exception handler (below).
+Any other exception that escapes an RPC method is caught and returned as an error with code `0` and
+`Exception.Message` as the `message`. The class name is added in `data` only when the endpoint **has** an
+exception handler (below) and that handler leaves `ExceptionHandled = False`.
+
+**That message reaches the client in every build, release included** — unlike a REST controller, which hides
+it outside `DEBUG`. A FireDAC exception carries the SQL text, an I/O exception a file path. For any endpoint
+exposed beyond your own machine, install the exception handler and turn unexpected exceptions into a generic
+message, logging the detail instead (see `dmvcframework-security`, §11).
 
 ### Exception classes (`MVCFramework.JSONRPC.pas`)
 
@@ -405,6 +411,23 @@ AEngine.PublishObject(
 ```
 
 An object in `ErrorInfo.Data` is freed by the framework in both the handled and unhandled paths.
+
+To stop internals leaking, end the handler with a catch-all instead of `ExceptionHandled := False` — an
+unhandled exception goes back with its message **and** its class name:
+
+```delphi
+    else
+    begin
+      LogE(Exc.ClassName + ': ' + Exc.Message);   // the detail stays in the log
+      ErrorInfo.Code := JSONRPC_USER_ERROR;
+      ErrorInfo.Msg  := 'Internal error';
+      ExceptionHandled := True;
+    end;
+```
+
+Not everything reaches the handler: `EMVCJSONRPCError` and the other `EMVCJSONRPCErrorResponse` subclasses
+are sent with the code and message you chose, and `EMVCDeserializationException` /
+`EMVCSerializationException` are sent as `-32600` / `-32603` with their own message.
 
 ---
 
@@ -574,7 +597,8 @@ end.
 
 ```delphi
 uses
-  Controllers.HomeU, JSONRPCServiceU, MVCFramework.JSONRPC, MVCFramework.Middleware.CORS;
+  Controllers.HomeU, JSONRPCServiceU, MVCFramework.JSONRPC, MVCFramework.Middleware.CORS,
+  MVCFramework.Middleware.ActiveRecord;
 
 procedure ConfigureEngine(AEngine: TMVCEngine);
 begin
@@ -584,6 +608,8 @@ begin
 
   // Middleware
   AEngine.AddMiddleware(TMVCCORSMiddleware.Create);
+  // GetCustomer/SearchCustomers use ActiveRecord: it needs a connection per request
+  AEngine.AddMiddleware(TMVCActiveRecordMiddleware.Create('MyConnDef'));
   // Middleware - END
 
   AEngine.PublishObject(

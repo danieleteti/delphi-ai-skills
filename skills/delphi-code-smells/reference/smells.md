@@ -524,7 +524,8 @@ every time.
 when the signature differs on purpose.
 
 **Detect** **W1010** (`Method '…' hides virtual method of base type '…'`). Promote it:
-`{$WARN HIDDEN_VIRTUAL ERROR}`. `HIDING_MEMBER` (W1009) covers the non-virtual case.
+`{$WARN HIDDEN_VIRTUAL ERROR}`. Hiding a **non-virtual** method produces no warning at all — not W1009,
+not anything else, even with `-W` — so that case is found only by reading the class.
 
 ---
 
@@ -572,7 +573,7 @@ machine. A `TTimer` handler is main-thread and is fine; a `TThread` or a `TTask`
 **Fix** `TThread.Queue` for progress, `TThread.Synchronize` when you need the answer back.
 `delphi`, `reference/concurrency.md`.
 
-**Detect** — make it fail loudly first (available since Delphi 11 Alexandria, `Vcl.Controls`):
+**Detect** — make it fail loudly first (`Vcl.Controls`; present in 12 Athens and 13 Florence):
 
 ```delphi
 TControl.RaiseOnNonMainThreadUsage := True;    // in the debug build

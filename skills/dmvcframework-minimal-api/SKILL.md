@@ -169,14 +169,18 @@ function MapMethods(const AVerbs: array of TMVCHTTPMethodType; const APath: stri
 
 Each `Map*` (and `MapMethods`) has generic overloads for **1 to 4** typed handler arguments:
 `MapGet<T1>`, `MapGet<T1,T2>`, `MapGet<T1,T2,T3>`, `MapGet<T1,T2,T3,T4>`.
+**Always write the type arguments** — `lWeb.MapGet<TWebContext>('/', function(Ctx: TWebContext): IMVCResponse ...)`.
+Delphi does not infer them from the anonymous method: without them the call fails with *E2250 There is no
+overloaded version of 'MapGet'*. The plain `MapGet(APath, AHandler)` takes only a handler with **no** arguments.
 
 > **Value-semantics trap:** `Use`/`Prefix`/`AsWeb` return a **new** group.
 > `lGroup.Use(Authorize);` on its own line is a **no-op**. Chain it or reassign:
 > `lGroup := lGroup.Use(Authorize);`
 
 Path syntax = standard DMVC: `($id)`, with optional constraint `($id:int)`.
-Constraints: `int`, `int64`, `float`, `bool`, `guid`, `date`. A failed constraint means the route simply does
-not match (→ 404 or the next route). Unknown constraint names are silently accepted.
+Constraints: `int`, `int64`, `float`, `bool`, `guid`, `date`, `sqids`. A failed constraint means the route
+simply does not match (→ 404 or the next route). An unknown constraint name raises `EMVCException` when the
+route is registered, at startup.
 Trailing wildcard: `($slug:*)` captures the rest of the path, slashes included, as a `string`.
 
 ### Route metadata — `TMVCRouteHandle` (returned by every `Map*`)
@@ -279,7 +283,8 @@ ProblemDetails(StatusCode, Title, Detail = '', Instance = '');
 - `Ok(string)` wraps the string as `{"message": "..."}`.
 - **Records cannot be returned.** There is no `Ok(record)` overload — build a class or a `TJsonObject`.
 - The result is mutable: `Result := Ok(lData); Result.StatusCode := 201;`
-- HTML: return a `TMVCHTMLResponse` (set `.HTMLBody`) or use `RenderView` (§7).
+- HTML: `RenderView` (§7) for a template; `Html(const AHtml: string)` for a small fragment with no template
+  (an HTMX swap target) — it sends the string **as is**, nothing escaped, so encode any untrusted value in it.
 
 ---
 
@@ -322,7 +327,7 @@ end;
 
 ### Ready-made filters (`MVCFramework.Filters`)
 
-**EndpointFilters** — `MemorySession(TimeoutMinutes = 0; HttpOnly = False)` · `FileSession(...)` ·
+**EndpointFilters** — `MemorySession(TimeoutMinutes = 0; HttpOnly = True; Secure = False)` · `FileSession(...)` ·
 `DatabaseSession(...)` · `CORS(...)` · `JWT(AuthHandler, ClaimsSetup, Secret, LoginURLSegment, ClaimsToCheck,
 LeewaySeconds, HMACAlgorithm)` · `BasicAuth(Validator, Realm)` · `Authorize` ·
 `RequireRole(Role)` / `RequireRole(Roles: TArray<string>)` (any-of) · `ActiveRecord(ConnectionDefName)`
@@ -347,14 +352,24 @@ AEngine.UseExceptionHandler('error', 'MyApp');
 Mark the group `.AsWeb` (excludes it from OpenAPI) and add a session filter:
 
 ```delphi
-var lWeb := ARoot.AsWeb.Use(MemorySession(10));
+var lWeb := ARoot.AsWeb.Use(MemorySession(30, True, dotEnv.Env('SESSION_COOKIE_SECURE', True)));  // as the wizard
 
-lWeb.MapGet('/',
-  function(Ctx: TWebContext): IMVCResponse   // MapGet<TWebContext>
+lWeb.MapGet<TWebContext>('/customers',
+  function(Ctx: TWebContext): IMVCResponse
+  var
+    lCustomers: TObjectList<TCustomer>;
   begin
-    ViewData['ispage']    := not Ctx.Request.IsHTMX;   // uses MVCFramework.HTMX
-    ViewData['customers'] := GetCustomers;
-    Result := RenderView('customers');
+    lCustomers := GetCustomers;
+    try
+      ViewData['customers'] := lCustomers;
+      // HTMX asks for the table only; a normal request gets the whole page
+      if Ctx.Request.IsHTMX and not Ctx.Request.HXIsBoosted then   // uses MVCFramework.HTMX
+        Result := RenderView('customers/table')
+      else
+        Result := RenderView('customers/index');
+    finally
+      lCustomers.Free;               // ViewData owns nothing
+    end;
   end);
 ```
 
@@ -372,12 +387,10 @@ function RenderViews(const AViewNames: TArray<string>; const AUseCommonHeadersAn
 otherwise; they are stale).
 
 Session: read/write `Ctx.Session['user']`, end with `Ctx.SessionStop`.
-The one HTMX idiom you need — full page vs fragment from the same handler:
-
-```delphi
-ViewData['ispage'] := not Ctx.Request.IsHTMX;
-```
-and in `baselayout.html`, wrap the chrome in `{{if ispage}}…{{endif}}`.
+The one HTMX idiom you need — full page vs fragment from the same handler, as in the handler above and in the
+wizard's People route (`routes_minimal_web.pas.tpro`): `customers/index.html` is the page (it extends
+`baselayout.html` and `{{include}}`s `table.html`), `customers/table.html` is the fragment. Test
+`HXIsBoosted` as well as `IsHTMX`: a link under `hx-boost` is an HTMX request that wants the whole page.
 For TemplatePro syntax and HTMX attributes see the `dmvcframework-webapp` skill.
 
 **Content negotiation:** if an `rkApi` and an `rkWeb` route share verb+path, the winner is scored on
@@ -411,13 +424,13 @@ procedure ConfigureRoutes(const ARoot: TMVCRouteGroup<TObject>);
 begin
   var lApi := ARoot.Prefix('/api');
 
-  lApi.MapGet('/customers',
+  lApi.MapGet<TCustomerSearch, ICustomerService>('/customers',
     function(Search: TCustomerSearch; Svc: ICustomerService): IMVCResponse   // record + DI interface
     begin
       Result := Ok(Svc.Search(Search.Query, Search.Page));                   // TObjectList → owned & freed
     end).WithName('customers.list').Produces<TCustomer>;
 
-  lApi.MapGet('/customers/($id:int)',
+  lApi.MapGet<Integer, ICustomerService>('/customers/($id:int)',
     function(ID: Integer; Svc: ICustomerService): IMVCResponse               // primitive ← route segment
     var
       lCustomer: TCustomer;
@@ -428,7 +441,7 @@ begin
       Result := Ok(lCustomer);
     end);
 
-  lApi.MapPost('/customers',
+  lApi.MapPost<TCreateCustomerReq, ICustomerService>('/customers',
     function(Req: TCreateCustomerReq; Svc: ICustomerService): IMVCResponse   // record → validated
     var
       lID: Integer;
@@ -440,7 +453,7 @@ begin
   // admin group — filters applied to every route below
   var lAdmin := lApi.Prefix('/admin').Use(Authorize).Use(RequireRole('admin'));
 
-  lAdmin.MapDelete('/customers/($id:int)',
+  lAdmin.MapDelete<Integer, ICustomerService>('/customers/($id:int)',
     function(ID: Integer; Svc: ICustomerService): IMVCResponse
     begin
       Svc.Delete(ID);
