@@ -219,8 +219,13 @@ the CSRF protection described here does not exist — the browser applies its ow
 nothing in some others). On those versions either authenticate with `Authorization: Bearer` or add the
 synchronizer token below.
 
+**`SameSite` does not stop login CSRF.** A cross-site page that auto-submits a form to `/login` with the
+attacker's credentials is a top-level navigation: the browser stores the attacker's cookie and the victim
+works inside the attacker's account. Reject a `POST /login` whose `Sec-Fetch-Site` is `cross-site` (or whose
+`Origin` is not yours) before it reaches the JWT middleware.
+
 **Do not weaken `SameSite` to `None`** without a hard requirement; `Strict` is what makes the cookie flow
-CSRF-safe. If you ever must relax it, add a synchronizer token: DMVCFramework does not ship one, so you
+CSRF-safe for authenticated requests. If you ever must relax it, add a synchronizer token: DMVCFramework does not ship one, so you
 generate a random token, store it in the session, echo it in a hidden form field / `hx-headers`, and compare
 on every state-changing request.
 
@@ -316,12 +321,9 @@ Result := RedirectResponse(lNext);
 
 ## 8. Security headers
 
-`SecurityHeaders` (HTTP filter, `MVCFramework.Filters`) sets **only two** headers:
-`X-XSS-Protection: 1; mode=block` and `X-Content-Type-Options: nosniff`.
-
-`X-XSS-Protection` is obsolete: current browsers ignore it, and the filter it controlled in old browsers
-could itself be abused to leak data. OWASP's guidance is to **not set it, or set it to `0`**, and to rely on a
-Content-Security-Policy instead. To follow it, set `X-XSS-Protection: 0` yourself in the filter below.
+`SecurityHeaders` (HTTP filter, `MVCFramework.Filters`) and `TMVCSecurityHeadersMiddleware` set **only two**
+headers: `X-Content-Type-Options: nosniff` and `X-XSS-Protection: 0` — the value OWASP recommends: the old
+browser XSS filter could itself be abused, and CSP is the real control.
 
 **It does not set CSP, HSTS or X-Frame-Options.** For a browser-facing app, add them — CSP is the one that
 actually stops XSS:
@@ -343,14 +345,9 @@ lEngine.UseHTTPFilter(
 Note the wizard's `baselayout.html` loads Bootstrap and htmx from a CDN — a strict `script-src 'self'` will
 block them. Either self-host those assets or add the CDN origin to the policy deliberately.
 
-**CORS:** `TMVCCORSMiddleware.Create` defaults to origin `*` and `AAllowsCredentials = True`. With `*` the
-framework **never** sends `Access-Control-Allow-Credentials` (`MVCCORSAllowsCredentials` refuses it, as
-browsers would), so a cross-origin page can read your anonymous responses but cannot make a
-cookie-authenticated request. That suits a public read-only API.
-
-The risk starts when you **name** an origin: credentials are then allowed by default, and every origin in the
-list can call your API **with the user's cookies** and read the answer. List only origins you control, and
-pass `False` when the frontend authenticates with a Bearer header rather than a cookie:
+**CORS:** with origin `*` (the default of `TMVCCORSMiddleware.Create`) credentials are never sent. Naming an
+origin enables credentials by default (`AAllowsCredentials = True`) — list only origins you control, and pass
+`False` when the frontend authenticates with a Bearer header:
 
 ```delphi
 // comma-separated list of exact origins
@@ -402,9 +399,7 @@ Never build that list from the request's own `Origin` header — that turns it b
 - **Do not leak internals in errors.** A stack trace, a SQL statement or a file path in a 500 is
   reconnaissance. Log the detail server-side; return a generic message. `UseExceptionHandler` renders a clean
   page for browsers and leaves the JSON error body for APIs.
-- **JSON-RPC sends `Exception.Message` to the client in every build**, release included — a FireDAC error
-  carries the SQL text, an I/O error the file path. Pass an exception handler to `PublishObject` that maps
-  unexpected exceptions to a generic message (see `dmvcframework-jsonrpc`, "Per-endpoint exception handler").
+- **JSON-RPC:** install an exception handler on `PublishObject` — see `dmvcframework-jsonrpc`.
 - **Rate-limit** what can be brute-forced (login, password reset, token endpoints):
   `lEngine.UseHTTPFilter(RateLimit(60, 60))`, or `RateLimitRedis` when you run more than one instance.
 - **Hash passwords** with bcrypt/scrypt/Argon2 and a per-user salt. Never MD5/SHA-1, never plain, never a

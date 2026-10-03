@@ -387,11 +387,7 @@ function RenderViews(const AViewNames: TArray<string>; const AUseCommonHeadersAn
 otherwise; they are stale).
 
 Session: read/write `Ctx.Session['user']`, end with `Ctx.SessionStop`.
-The one HTMX idiom you need — full page vs fragment from the same handler, as in the handler above and in the
-wizard's People route (`routes_minimal_web.pas.tpro`): `customers/index.html` is the page (it extends
-`baselayout.html` and `{{include}}`s `table.html`), `customers/table.html` is the fragment. Test
-`HXIsBoosted` as well as `IsHTMX`: a link under `hx-boost` is an HTMX request that wants the whole page.
-For TemplatePro syntax and HTMX attributes see the `dmvcframework-webapp` skill.
+Page vs fragment: the handler above; the template pair, TemplatePro and HTMX are in `dmvcframework-webapp`.
 
 **Content negotiation:** if an `rkApi` and an `rkWeb` route share verb+path, the winner is scored on
 `Accept`/`Content-Type` (web wins on `text/html`, api on `application/json`). Ties → first registered.
