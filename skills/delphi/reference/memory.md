@@ -89,8 +89,10 @@ The community style guide says "always use `FreeAndNil()` instead of `.Free`". T
 a rule: the RTL itself uses plain `Free` in destructors and local blocks throughout. Neither the docwiki
 style guide nor the RTL endorses "always".
 
-Note the `[ref]` in the signature: `FreeAndNil` takes an untyped-by-reference parameter, so it accepts any
-object variable — but **not a property**. `FreeAndNil(Self.SomeProperty)` does not compile.
+The signature is `procedure FreeAndNil(const [ref] Obj: TObject)` (`System.SysUtils`). It also accepts a
+property, and that compiles silently either way: a property backed by a field (`read fObj`) nils the
+field, but a property with a **getter** passes a temporary — the object is freed and the field still points
+at it. Call `FreeAndNil` on the field, not on the property.
 
 ### Destructors
 
@@ -132,8 +134,8 @@ end;                                     // refcount 0 -> the object frees itsel
 - **Never `Free` an object you hold through an interface.** The refcount will drop to zero later and free
   it again.
 - The GUID is not decoration. Without it, `Supports` and `as` on the interface do not compile.
-- `TInterfacedObject` is the refcounting base. `TNoRefCountObject` (added in **11 Alexandria**;
-  `System.pas`) is the base for singletons and stack-lifetime helpers that implement an interface but must
+- `TInterfacedObject` is the refcounting base. `TNoRefCountObject` (`System.pas`; present in 12
+  Athens and 13 Florence — on an older target grep your own `System.pas` before using it) is the base for singletons and stack-lifetime helpers that implement an interface but must
   not be destroyed by the count.
 
 ### The classic mixed object/interface bug
@@ -297,9 +299,11 @@ begin
 end;
 ```
 
-Do not add an `Assign` operator that shallow-copies the pointer, or two records will free the same object.
-Either forbid copying (give `Assign` a body that raises or deep-copies) or accept that the record must not
-be assigned.
+**As written, this record must never be copied.** Without an `Assign` operator the compiler's default copy
+is a shallow one: `b := a`, passing it by value, or returning it from a function all leave two records
+holding the same object, and both `Finalize`s free it — `EInvalidPointer`, plus a leak of the object `b`
+created in its own `Initialize`. Either add a `class operator Assign` that raises or deep-copies, or treat
+the record as non-copyable and pass it only as `const` / `var`.
 
 ---
 

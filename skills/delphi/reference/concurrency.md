@@ -6,7 +6,8 @@
 There is no exception and no "it usually works" — a background thread writing `Label1.Caption` produces
 access violations that reproduce once a week on the customer's machine.
 
-Make the violation loud in your debug build (`Vcl.Controls`, available since **11 Alexandria**):
+Make the violation loud in your debug build (`Vcl.Controls`; present in 12 Athens and 13 Florence — on an
+older target grep your own `Vcl.Controls.pas` first):
 
 ```delphi
 TControl.RaiseOnNonMainThreadUsage := True;
@@ -195,8 +196,7 @@ end;
 ```
 
 `TMonitor` also has `TryEnter`, `Wait`, `Pulse`, `PulseAll` — the full condition-variable set — and
-`SetSpinCount`. Note `TMonitor.Exit` shadows the `Exit` standard procedure inside that scope; that is why
-it is always written qualified.
+`SetSpinCount`.
 
 ```delphi
 // TCriticalSection — one instance, created once, freed once

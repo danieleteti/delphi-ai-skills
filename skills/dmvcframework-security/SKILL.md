@@ -94,7 +94,7 @@ the client controls **every writable property**, including the ones you never me
 function TUsersController.CreateUser(const [MVCFromBody] User: TUser): IMVCResponse;
 begin
   User.Insert;                       // role = admin. Congratulations.
-  Result := CreatedResponse('/users/' + User.ID.ToString);
+  Result := CreatedResponse('/users/' + User.ID.Value.ToString);   // ID is a NullableInt64
 end;
 ```
 
@@ -176,8 +176,22 @@ TemplatePro **HTML-escapes `{{:value}}` by default**. The `$` suffix turns escap
 {{:comment.Body$}}     {{# RAW — an XSS hole if Body came from a user #}}
 ```
 
-Use `$` only for HTML **you** generated. If you must render user-submitted rich text, sanitize it server-side
-with an allow-list of tags before it ever reaches `ViewData` — an escape-blacklist will be bypassed.
+A block does the same for everything inside it — `{{autoescape false}}` … `{{endautoescape}}` disables
+escaping exactly like `$` on every value in between. Search for both when reviewing a template.
+
+Use `$` (or `autoescape false`) only for HTML **you** generated. If you must render user-submitted rich text,
+sanitize it server-side with an allow-list of tags before it ever reaches `ViewData` — an escape-blacklist
+will be bypassed.
+
+**Escaping is HTML-entity encoding, nothing more.** TemplatePro's `HTMLEncode` turns `& < > " '` into
+entities. That is enough for element text and for a **quoted** attribute value. It does not protect:
+
+- a URL attribute: `<a href="{{:link}}">` with `link = javascript:alert(1)` contains none of those
+  characters and runs. Allow-list the scheme (`https:`, or a relative path) on the server;
+- an **unquoted** attribute (`<div class={{:cls}}>`): a space ends the value and starts a new attribute.
+  Always quote;
+- a JavaScript context — inside `<script>`, an `on*=` handler, or `hx-on`. Do not put user data there; pass
+  it in a `data-*` attribute and read it from script.
 
 For JSON APIs, set the content type correctly (`application/json`, which DMVC does) and never build HTML by
 string concatenation in Delphi — render a template (see the `dmvcframework-webapp` skill).
@@ -198,6 +212,12 @@ DMVCFramework's cookie JWT middleware defaults are already correct — `Secure=T
 UseJWTCookieAuthentication(...)
   .SetCookieSecure(True)         // HTTPS only — keep True in production
 ```
+
+**`SameSite` is only written on Delphi 11 or later.** The middleware sets the attribute under
+`{$IF CompilerVersion >= 35.0}`: on 10.2 Tokyo – 10.4 Sydney the cookie carries no `SameSite` at all, and
+the CSRF protection described here does not exist — the browser applies its own default (`Lax` in Chromium,
+nothing in some others). On those versions either authenticate with `Authorization: Bearer` or add the
+synchronizer token below.
 
 **Do not weaken `SameSite` to `None`** without a hard requirement; `Strict` is what makes the cookie flow
 CSRF-safe. If you ever must relax it, add a synchronizer token: DMVCFramework does not ship one, so you
@@ -229,8 +249,19 @@ if not lFull.StartsWith(TPath.GetFullPath(lRoot) + PathDelim, True) then
 
 **Uploads** (`TMVCFormFile`, minimal API — see `dmvcframework-minimal-api`):
 
-- `TMVCFormFile.FileName` **is attacker-controlled**. `SaveToFile(APath)` writes wherever you point it —
-  it does not sanitize. Generate your own name (a GUID) and keep the client's only as metadata.
+- `TMVCFormFile.FileName` **is attacker-controlled** (`..\..\x.aspx`, `C:\inetpub\x.aspx`, `NUL`,
+  `report.pdf:stream`). Do not build a path out of it. Either generate your own name (a GUID) and keep the
+  client's only as metadata, or use the overload that sanitizes for you:
+
+  ```delphi
+  lFile.SaveToFile(lUploadDir, lFile.FileName);   // the client picks the name, never the directory
+  ```
+
+  `SaveToFile(ADirectory, AClientFileName)` reduces the name to a bare leaf (`SanitizeLeafName`) and raises
+  on one that would write somewhere else (a colon, a device name, a trailing dot or space). `SafeFileName`
+  returns the same leaf for your own use. The one-argument `SaveToFile(APath)` refuses a path that ends with
+  an unsanitized client name, but cannot repair one you built differently — prefer the two-argument form.
+  A sanitized leaf can still **overwrite** another upload with the same name: when that matters, use a GUID.
 - Do not trust `ContentType` either — it is a client-supplied header. Check the actual bytes (magic number)
   when the file type matters.
 - Enforce a **size limit** and an **extension allow-list** (never a deny-list).
@@ -258,12 +289,26 @@ Both come from the same mistake: taking a URL from the client and acting on it.
 Result := RedirectResponse(Context.Request.QueryStringParam('returnUrl'));
 ```
 
-Accept only **relative, single-slash** paths, or an allow-list of known destinations:
+Best: an **allow-list** of known destinations, or an id the server maps to a path. If you must accept a
+path, accept only a local one — and `StartsWith('//')` alone is not enough: browsers treat `\` as `/`, so
+`/\evil.com` is protocol-relative too, and they strip tabs and newlines before parsing (`/<TAB>/evil.com`).
 
 ```delphi
+function IsLocalRedirect(const AUrl: string): Boolean;
+var
+  C: Char;
+begin
+  // one leading '/', not '//'; no backslash and no control character anywhere
+  Result := AUrl.StartsWith('/') and not AUrl.StartsWith('//');
+  if Result then
+    for C in AUrl do
+      if (C < ' ') or (C = #127) or (C = '\') then
+        Exit(False);
+end;
+
 lNext := Context.Request.QueryStringParam('returnUrl');
-if (lNext = '') or (not lNext.StartsWith('/')) or lNext.StartsWith('//') then
-  lNext := '/';                       // '//evil.com' is protocol-relative — reject it
+if not IsLocalRedirect(lNext) then
+  lNext := '/';
 Result := RedirectResponse(lNext);
 ```
 
@@ -273,6 +318,10 @@ Result := RedirectResponse(lNext);
 
 `SecurityHeaders` (HTTP filter, `MVCFramework.Filters`) sets **only two** headers:
 `X-XSS-Protection: 1; mode=block` and `X-Content-Type-Options: nosniff`.
+
+`X-XSS-Protection` is obsolete: current browsers ignore it, and the filter it controlled in old browsers
+could itself be abused to leak data. OWASP's guidance is to **not set it, or set it to `0`**, and to rely on a
+Content-Security-Policy instead. To follow it, set `X-XSS-Protection: 0` yourself in the filter below.
 
 **It does not set CSP, HSTS or X-Frame-Options.** For a browser-facing app, add them — CSP is the one that
 actually stops XSS:
@@ -294,25 +343,34 @@ lEngine.UseHTTPFilter(
 Note the wizard's `baselayout.html` loads Bootstrap and htmx from a CDN — a strict `script-src 'self'` will
 block them. Either self-host those assets or add the CDN origin to the policy deliberately.
 
-**CORS is permissive by default:** `TMVCCORSMiddleware.Create` defaults to `Access-Control-Allow-Origin: *`
-with credentials allowed. That is fine for a public read-only API and wrong for anything with a session.
-Name your origins:
+**CORS:** `TMVCCORSMiddleware.Create` defaults to origin `*` and `AAllowsCredentials = True`. With `*` the
+framework **never** sends `Access-Control-Allow-Credentials` (`MVCCORSAllowsCredentials` refuses it, as
+browsers would), so a cross-origin page can read your anonymous responses but cannot make a
+cookie-authenticated request. That suits a public read-only API.
+
+The risk starts when you **name** an origin: credentials are then allowed by default, and every origin in the
+list can call your API **with the user's cookies** and read the answer. List only origins you control, and
+pass `False` when the frontend authenticates with a Bearer header rather than a cookie:
 
 ```delphi
-AEngine.AddMiddleware(TMVCCORSMiddleware.Create('https://app.example.com'));
+// comma-separated list of exact origins
+AEngine.AddMiddleware(TMVCCORSMiddleware.Create('https://app.example.com,https://admin.example.com', False));
 ```
 
-`*` is not a wildcard for "my frontend" — it is "every site on the internet".
+Never build that list from the request's own `Origin` header — that turns it back into "every site".
 
 ---
 
 ## 9. JWT
 
-- **Never** accept the `alg` from the token. Reject `none`; do not let an RS256 verifier be tricked into
-  HS256 with the public key as the secret. Pin the algorithm you configured.
+- **The algorithm is already pinned.** `TJWT` rejects a token whose `alg` differs from the configured signer's
+  (so `none`, or HS256 against an RS256 verifier, fails). Do not undo this with a custom signer that accepts
+  several algorithms.
 - The secret is a **secret**: ≥256 bits of randomness, from the environment, never in the repo, and rotatable.
   A JWT signed with `'change-me'` is a signature by anyone who reads your GitHub.
-- Always check `ExpirationTime`, `NotBefore`, `IssuedAt` — that is what the `AClaimsToCheck` set is for:
+- **Expiry is NOT checked unless you ask.** `AClaimsToCheck` defaults to `[]` in every JWT middleware
+  constructor and in `UseJWTCookieAuthentication`: with the default, an expired token is accepted forever
+  (the middleware only logs a warning at startup). Always pass the set:
 
   ```delphi
   [TJWTCheckableClaim.ExpirationTime, TJWTCheckableClaim.NotBefore, TJWTCheckableClaim.IssuedAt]
@@ -344,6 +402,9 @@ AEngine.AddMiddleware(TMVCCORSMiddleware.Create('https://app.example.com'));
 - **Do not leak internals in errors.** A stack trace, a SQL statement or a file path in a 500 is
   reconnaissance. Log the detail server-side; return a generic message. `UseExceptionHandler` renders a clean
   page for browsers and leaves the JSON error body for APIs.
+- **JSON-RPC sends `Exception.Message` to the client in every build**, release included — a FireDAC error
+  carries the SQL text, an I/O error the file path. Pass an exception handler to `PublishObject` that maps
+  unexpected exceptions to a generic message (see `dmvcframework-jsonrpc`, "Per-endpoint exception handler").
 - **Rate-limit** what can be brute-forced (login, password reset, token endpoints):
   `lEngine.UseHTTPFilter(RateLimit(60, 60))`, or `RateLimitRedis` when you run more than one instance.
 - **Hash passwords** with bcrypt/scrypt/Argon2 and a per-user salt. Never MD5/SHA-1, never plain, never a
@@ -358,7 +419,7 @@ AEngine.AddMiddleware(TMVCCORSMiddleware.Create('https://app.example.com'));
 - [ ] Is it authenticated? Is it **authorized** — scoped to the caller, in the query?
 - [ ] Does the body bind to a DTO, or is every sensitive entity field `[MVCDoNotDeserialize]`?
 - [ ] Is every SQL string a constant, with values in the params array?
-- [ ] Does any template output use `$` on data that came from a user?
+- [ ] Does any template output use `$` or `{{autoescape false}}` on data that came from a user?
 - [ ] Is any filesystem path or outbound URL built from client input?
 - [ ] Are uploads size-limited, extension-checked, renamed, and stored outside the web root?
 - [ ] Are errors generic to the client and detailed only in the log?

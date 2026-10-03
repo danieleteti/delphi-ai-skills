@@ -160,7 +160,9 @@ brand tokens and `--bs-*` variables, not literals.
 ## 5. Toasts
 
 The layout defines `#toastContainer` and a global `showToast(message, type)` — `type` is `success`, `danger`,
-`warning` or `info`. From an HTMX response, trigger it with a client event from Delphi:
+`warning` or `info`. **`message` goes into `innerHTML`: it is HTML, not text.** A fixed string chosen by the
+server is safe; anything a user typed (a name, a title) must be escaped first, or it is a DOM XSS.
+From an HTMX response, trigger it with a client event from Delphi:
 
 ```delphi
 uses MVCFramework.HTMX;
@@ -185,8 +187,11 @@ Need structured data instead of a plain string? Pass an **object** and read its 
 Context.Response.HXTriggerClientEvent('customerSaved', lCustomer);   // a Delphi object
 ```
 ```javascript
+// FirstName is user input: escape it before it reaches showToast's innerHTML
+function escapeHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
 document.body.addEventListener('customerSaved', function (evt) {
-  showToast('Saved ' + evt.detail.FirstName, 'success');
+  showToast('Saved ' + escapeHtml(evt.detail.FirstName), 'success');
 });
 ```
 

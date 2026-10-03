@@ -14,7 +14,7 @@
 | `TThreadList<T>` / `TThreadedQueue<T>` | locked wrappers |
 | `TEnumerable<T>` / `TEnumerator<T>` | the abstract bases every container derives from; `ToArray` lives here |
 | `TArray` (the class) | static helpers: `Sort<T>`, `BinarySearch<T>`, `IndexOf<T>`, `LastIndexOf<T>`, `Contains<T>`, `Copy<T>`, `Concat<T>`, `FreeValues<T>`, `ToString<T>` |
-| `THashSet<T>`, `TOrderedDictionary<K,V>`, `TObjectHashSet<T>` | **not in Delphi 11** — verify before targeting 12 |
+| `THashSet<T>`, `TOrderedDictionary<K,V>`, `TObjectHashSet<T>` | in 12 Athens and 13 Florence; **not in Delphi 11** |
 
 `TArray<T>` (with angle brackets) is the *dynamic array type* `array of T`, declared in `System`. `TArray`
 (no brackets) is the helper *class* in `System.Generics.Collections`. Two different things, one letter
@@ -36,7 +36,7 @@ try
 
   lAges.ContainsKey('anna');
   lAges.Remove('anna');
-  var lPair := lAges.ExtractPair('bob');         // removes and returns it
+  var lRemoved := lAges.ExtractPair('bob');      // removes and returns it
 
   for var lPair in lAges do
     Writeln(lPair.Key, '=', lPair.Value);
@@ -193,12 +193,22 @@ for var i := 1 to 3 do
   lActions.Add(procedure begin Writeln(i); end);   // prints 3, 3, 3? — depends on the loop variable's
                                                    // lifetime; do not rely on it either way
 
-// CORRECT — capture a fresh variable per iteration
+// ALSO BROKEN — prints 3, 3, 3. An inline var inside the loop is NOT a new variable per pass:
+// every local the closure captures is hoisted into one frame object shared by the whole routine.
 for var i := 1 to 3 do
 begin
-  var lCaptured := i;                              // a new variable each pass
+  var lCaptured := i;
   lActions.Add(procedure begin Writeln(lCaptured); end);
 end;
+
+// CORRECT — build each closure in its own routine call; each call gets its own frame
+function MakeProc(AValue: Integer): TProc;
+begin
+  Result := procedure begin Writeln(AValue); end;
+end;
+
+for var i := 1 to 3 do
+  lActions.Add(MakeProc(i));                       // prints 1, 2, 3
 ```
 
 More consequences worth knowing:
@@ -262,19 +272,19 @@ Reach for it when all you need is an enum name; it links far less code than `Sys
 
 ### Visibility
 
-Extended RTTI is emitted per the `{$RTTI}` directive in force where the type is declared. **Public and
-published members are the safe assumption; private and protected members may not be visible** unless the
-declaring unit raised the visibility:
+Extended RTTI is emitted per the `{$RTTI}` directive in force where the type is declared. The defaults
+(`System.pas`) differ by member kind:
 
 ```delphi
-{$RTTI EXPLICIT METHODS([vcPublic, vcPublished])
-       PROPERTIES([vcPublic, vcPublished])
-       FIELDS([vcPrivate, vcProtected, vcPublic, vcPublished])}
+DefaultMethodRttiVisibility   = [vcPublic, vcPublished];
+DefaultFieldRttiVisibility    = [vcPrivate..vcPublished];     // every field, private included
+DefaultPropertyRttiVisibility = [vcPublic, vcPublished];
 ```
 
-If a framework must map private fields (an ORM, a serializer), it has to say so with a directive like the
-above in the unit that declares the entity — or map public properties instead. Do not assume a private
-field is reachable.
+So **fields of every visibility have RTTI by default** — this is what lets an ORM or a serializer map a
+private `fName` field. Private and protected *methods and properties* do not, unless the declaring unit
+raises the visibility with a `{$RTTI EXPLICIT ...}` directive. A unit can also *lower* it (`{$RTTI
+EXPLICIT FIELDS([])}`), so for a type you did not write, check rather than assume.
 
 ---
 
