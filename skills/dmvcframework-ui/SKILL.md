@@ -187,7 +187,6 @@ Need structured data instead of a plain string? Pass an **object** and read its 
 Context.Response.HXTriggerClientEvent('customerSaved', lCustomer);   // a Delphi object
 ```
 ```javascript
-// FirstName is user input: escape it before it reaches showToast's innerHTML
 function escapeHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
 document.body.addEventListener('customerSaved', function (evt) {

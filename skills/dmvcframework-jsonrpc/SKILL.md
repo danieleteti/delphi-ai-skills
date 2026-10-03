@@ -337,14 +337,15 @@ raise EMVCJSONRPCError.CreateFmt(JSONRPC_USER_ERROR + 3, 'Customer %d is locked'
 
 An object passed as `Data` is **freed by the framework** (`TJSONRPCResponseError.Destroy`). Do not free it.
 
-Any other exception that escapes an RPC method is caught and returned as an error with code `0` and
-`Exception.Message` as the `message`. The class name is added in `data` only when the endpoint **has** an
-exception handler (below) and that handler leaves `ExceptionHandled = False`.
+Any other exception that escapes an RPC method (or an `OnAfterCall` hook) is caught and returned as an error
+with code `0`. In `DEBUG` the `message` is `Exception.Message`. **Outside `DEBUG` it is filtered, as REST
+does:** the message of an `EMVCException` and the unit's own protocol errors (`EMVCJSONRPCException`,
+`EMVCJSONRPCInvalidVersion`) pass; anything else — a FireDAC error with its SQL, an I/O error with its path —
+becomes `Internal server error`. The class name in `data` (added when a handler leaves
+`ExceptionHandled = False`) and a serialization error's `DetailedMessage` are `DEBUG`-only.
 
-**That message reaches the client in every build, release included** — unlike a REST controller, which hides
-it outside `DEBUG`. A FireDAC exception carries the SQL text, an I/O exception a file path. For any endpoint
-exposed beyond your own machine, install the exception handler and turn unexpected exceptions into a generic
-message, logging the detail instead (see `dmvcframework-security`, §11).
+An `EMVCException` message still goes out in release: do not put internals in one. To log the detail and
+choose the message yourself, install the exception handler below.
 
 ### Exception classes (`MVCFramework.JSONRPC.pas`)
 
@@ -412,8 +413,8 @@ AEngine.PublishObject(
 
 An object in `ErrorInfo.Data` is freed by the framework in both the handled and unhandled paths.
 
-To stop internals leaking, end the handler with a catch-all instead of `ExceptionHandled := False` — an
-unhandled exception goes back with its message **and** its class name:
+The handler receives the full exception; the `ErrorInfo.Msg` it starts with is already the filtered one. End
+it with a catch-all to log the detail and send a message you chose:
 
 ```delphi
     else

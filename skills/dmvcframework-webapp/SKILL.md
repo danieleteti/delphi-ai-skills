@@ -115,10 +115,8 @@ Key invariants:
   content type once in the engine config (`Config[TMVCConfigKey.DefaultContentType] := TMVCMediaType.TEXT_HTML`)
   or in `OnBeforeAction`. Use it only when one action must differ from the app default.
 - Full-page actions call `Result := RenderView('folder/template')`.
-- **Fragment actions also call `RenderView`.** The same action serves the full page and the HTMX fragment,
-  as the wizard's People example does: `if Context.Request.IsHTMX and not Context.Request.HXIsBoosted then
-  Result := RenderView('people/table') else Result := RenderView('people/index');` — `people/index` extends
-  `baselayout.html` and `{{include}}`s `table.html`. Do not hand-build HTML strings.
+- **Fragment actions also call `RenderView`**: the same action renders `x/table` or `x/index` (§7). Do not
+  hand-build HTML strings.
 - `procedure` is allowed for redirects (`Redirect('/people')`), which produce no body.
 - The JSON API sidecar (`/api`) uses standard `IMVCResponse` factory methods.
 
@@ -164,7 +162,6 @@ begin
        TJWTCheckableClaim.IssuedAt],
       300         // Leeway seconds
     )
-    // Set JWT_COOKIE_SECURE=false in .env only for local development over HTTP.
     .SetCookieSecure(dotEnv.Env('JWT_COOKIE_SECURE', True))
   );
   AEngine.AddMiddleware(
@@ -561,8 +558,7 @@ Context.Response.HXSetLocation('/web/products');
 Context.Response.HXSetPushUrl('/web/items/' + ItemID);
 Context.Response.HXSetReplaceUrl('/web/items/' + ItemID);
 
-// client-side events (see the dmvcframework-ui skill for showToast — it takes HTML:
-// escape any user-supplied value in the payload before it reaches showToast)
+// client-side events (see the dmvcframework-ui skill for showToast — it takes HTML)
 Context.Response.HXTriggerClientEvent('refreshCart');
 Context.Response.HXTriggerClientEvents(['refreshCart', 'updateBadge']);
 
@@ -612,9 +608,9 @@ begin
   try
     ViewData['items'] := lItems;
     if Context.Request.IsHTMX and not Context.Request.HXIsBoosted then
-      Result := RenderView('items/table')   // the fragment, no {{extends}}
+      Result := RenderView('items/table')
     else
-      Result := RenderView('items/index');  // the page: extends baselayout, includes table.html
+      Result := RenderView('items/index');
   finally
     lItems.Free;                     // ViewData owns nothing
   end;

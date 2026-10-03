@@ -14,7 +14,7 @@ Official repo: https://github.com/danieleteti/delphimvcframework
 
 These skills target **DelphiMVCFramework 3.5.x**. Before writing code, check the project's version
 (`DMVCFRAMEWORK_VERSION` in the framework's `sources/dmvcframeworkbuildconsts.inc`, or the version the
-project's `AGENTS.md` / `CLAUDE.md` states): if its major.minor is not 3.5, tell the user that these skills
+project's `AGENTS.md` / `CLAUDE.md` states): if its major.minor differs, tell the user that these skills
 describe a different release and that names may have changed. If you
 need a signature they do not cover, or you suspect the framework has moved on, **do not invent a name and do
 not answer from memory** — a plausible-but-wrong identifier costs the user a compile error and their trust.
@@ -737,7 +737,7 @@ In `EngineConfigU.pas`: add `uses Controllers.Products;` and
 
 - **Never `procedure + Render(...)`** — use `function` returning data or `IMVCResponse` factory methods
 - **Double free** — the framework frees the returned object. `Result := ToFree(x)` and `OKResponse(ToFree(x))` free it twice. `ToFree` is for objects you do NOT return
-- **`[MVCOwned]`** — a deserialization hint only (create the child when the JSON has it, free it when the JSON is `null`). It does not create or free anything else: the entity still creates the child list in its constructor and frees it in its destructor (`reference/activerecord.md`, Master-Detail)
+- **`[MVCOwned]`** — deserialization hint only; the entity still creates and frees the list (`reference/activerecord.md`, Master-Detail)
 - **Nullable fields** — `NullableInt64`, `NullableString`, etc. from `MVCFramework.Nullables`; always check `.HasValue` before `.Value`
 - **Transactions** — `TMVCActiveRecordMiddleware` opens a connection per request but does NOT auto-commit; wrap multi-step mutations in `StartTransaction/Commit/Rollback`
 - **CORS order** — add `TMVCCORSMiddleware` BEFORE JWT/Basic so `OPTIONS` preflight is served without auth

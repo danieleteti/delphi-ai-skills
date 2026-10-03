@@ -90,8 +90,12 @@ Do **not** re-register controllers and middleware by hand in the test: a hand-pi
 application (leave out the JWT middleware and every authentication test in §6 fails).
 
 `ConfigureEngine` reads `dotEnv` (`JWT_SECRET` has no fallback, by design), so the test executable needs a
-`.env` in its own folder (a test copy of the app's `bin\.env`), and `Boot` from the wizard's `BootConfigU`
-must run before the engine is configured.
+`.env` in its own folder with its **own throwaway `JWT_SECRET`** — never a copy of the app's secret — kept out
+of version control. `Boot` from the wizard's `BootConfigU` runs **once**, in the test `.dpr` (§10): a second
+call raises `EMVCDotEnv 'dotEnv already initialized'`, so it cannot live in a per-fixture setup.
+A **Minimal API** project registers its routes outside `ConfigureEngine`: also call
+`ConfigureRoutes(AEngine.Root)` (unit `RoutesU`, plus `MVCFramework.MinimalAPI` for `Root`), as the wizard's
+`.dpr` does.
 
 **File: `Tests.Server.pas`**
 
@@ -111,12 +115,10 @@ uses
   System.SysUtils,
   MVCFramework.Commons,
   MVCFramework.Server.Factory,
-  BootConfigU,                   // the app's own units, added to the test project
-  EngineConfigU;
+  EngineConfigU;                 // the app's own unit, added to the test project
 
 function StartTestServer(APort: Integer; out AEngine: TMVCEngine): IMVCServer;
 begin
-  Boot;                          // dotEnv (+ logger): ConfigureEngine reads dotEnv
   AEngine := TMVCEngine.Create(
     procedure(Config: TMVCConfig)
     begin
@@ -153,7 +155,7 @@ uses
   MVCFramework.RESTClient;       // TMVCRESTClient
 
 const
-  TEST_HOST = 'localhost';
+  TEST_HOST = '127.0.0.1';       // the address StartTestServer listens on
   TEST_PORT = 9998;              // keep off the dev server's port
 
 type
@@ -577,7 +579,9 @@ uses
   Tests.Base in 'Tests.Base.pas',
   Tests.MyResource in 'Tests.MyResource.pas',
   Tests.Auth in 'Tests.Auth.pas',
-  Tests.Server in 'Tests.Server.pas';
+  Tests.Server in 'Tests.Server.pas',
+  BootConfigU;                   // the app's own unit
+
 
 var
   runner: ITestRunner;
@@ -586,6 +590,7 @@ var
   nunitLogger: ITestLogger;
 begin
   try
+    Boot;                        // once per process - see section 2
     TDUnitX.CheckCommandLine;
     runner := TDUnitX.CreateRunner;
     runner.UseRTTI := True;
