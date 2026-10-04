@@ -310,6 +310,25 @@ var lRoles    := Context.LoggedUser.Roles;  // TList<string>
 var lCustom   := Context.LoggedUser.CustomData['key'];
 ```
 
+### Form posts — validate and re-render with errors
+
+A posted form is **not** validated automatically (only `[MVCFromBody]` is). The framework sample
+`samples/webapp_htmx_forms` shows the pattern (`ReadPerson` in `PeopleSampleU.pas`):
+
+1. Copy `Context.Request.ContentFields` (keys are **lowercase** field names) into an object whose
+   **properties** carry validator attributes (`MVCFramework.Validators`).
+2. `TMVCValidationEngine.Validate(lModel, lErrors)` (`MVCFramework.ValidationEngine`): `lErrors` is nil when
+   valid, otherwise a `TDictionary<string, string>` you free, keyed by **property name** (`Email`).
+3. Copy the messages into your error map with `LowerCase(Key)` — the forms library (`lib/forms_bootstrap5.tpro`)
+   looks them up by the control's `name`.
+4. Valid → save, then `RedirectResponse(...)` (Post/Redirect/Get). Invalid → `ViewData['formModel'] :=
+   Context.Request.ContentFields` (shows what was typed), `ViewData['formErrors'] := lErrors`, render the same
+   view with status 422 (`TMVCHTMLResponse` with `StatusCode := HTTP_STATUS.UnprocessableEntity`).
+
+`MVCRequired` passes on `Integer`/`TDate` (0 is a value): parse those fields yourself and add a message when
+the text does not convert. Full code (controller and Minimal API): the `dmvcframework` skill,
+`reference/validation.md`, "HTML form post".
+
 ---
 
 ## 5. TemplatePro Template Syntax
@@ -471,8 +490,9 @@ only the handful of patterns that carry a *Delphi-side* implication.
 
 ### The one pattern that shapes your controller: page or fragment, one action
 
-The same action serves the full page and the HTMX fragment — the shape of the wizard's People example
-(`controller.pas.tpro`). Two templates: `customers/index.html` is the page (it `{{extends
+The same action serves the full page and the HTMX fragment — the shape of the People table in
+`samples/webapp_htmx_forms` (`Controllers.PeoplePagesU`, `people/index.html` + `people/table.html`).
+Below with customers. Two templates: `customers/index.html` is the page (it `{{extends
 "../baselayout.html"}}` and `{{include "table.html"}}`), `customers/table.html` is the part that changes and
 has no `{{extends}}`. You do **not** write a separate fragment endpoint, and you do **not** build HTML strings.
 
@@ -485,7 +505,8 @@ begin
   try
     ViewData['customers'] := lCustomers;
     // HTMX asks for the table only; a normal request gets the whole page
-    if Context.Request.IsHTMX and not Context.Request.HXIsBoosted then   // uses MVCFramework.HTMX
+    if Context.Request.IsHTMX and not Context.Request.HXIsBoosted
+       and not Context.Request.HXIsHistoryRestoreRequest then   // uses MVCFramework.HTMX
       Result := RenderView('customers/table')
     else
       Result := RenderView('customers/index');
@@ -497,7 +518,10 @@ end;
 
 A plain browser navigation gets the whole document; an `hx-get` gets just the table. **Test `HXIsBoosted`
 too:** a link under `hx-boost` is an HTMX request that expects the whole page — checking `IsHTMX` alone
-serves it a fragment without the layout.
+serves it a fragment without the layout. **And `HXIsHistoryRestoreRequest`:** on a history-cache miss (Back
+after the cache is full) htmx re-requests the URL with `HX-Request: true` and swaps the answer into `body`, so
+it needs the whole page too. Because the same URL answers with a page or a fragment, also send
+`Vary: HX-Request`.
 
 ### Triggering the request
 
@@ -1063,7 +1087,7 @@ AEngine.AddController(TProductsController);
 |---------|-----|
 | Action is `procedure` instead of `function` | All web actions must be `function`: return `String` for HTML, `IMVCResponse` for JSON. |
 | Freeing nothing after `ViewData['x'] := lObj` | `ViewData` owns nothing. Free the object yourself in a `finally` after `RenderView`. |
-| Hand-building HTML for HTMX fragments | Same action, two templates: `IsHTMX and not HXIsBoosted` → `RenderView('x/table')`, otherwise `RenderView('x/index')`. |
+| Hand-building HTML for HTMX fragments | Same action, two templates: `IsHTMX and not HXIsBoosted and not HXIsHistoryRestoreRequest` → `RenderView('x/table')`, otherwise `RenderView('x/index')`. |
 | Writing `HX-*` headers by hand | `uses MVCFramework.HTMX` — `Response.HXSetRedirect/HXSetPushUrl/HXSetReswap/HXSetRetarget/HXTriggerClientEvent`, `Request.IsHTMX/HXGetTarget`. |
 | `ViewData` not set before `RenderView` | `OnBeforeAction` sets shared data; page-specific data must be set in the action function body before `Result := RenderView(...)`. |
 | Template extends wrong relative path | `home/index.html` → `{{extends "../baselayout.html"}}`. `error.html` (same folder as baselayout) → `{{extends "baselayout.html"}}`. |

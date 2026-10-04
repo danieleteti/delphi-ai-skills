@@ -219,6 +219,13 @@ Stock Bootstrap, plus HTMX for the submit. Server-side validation errors come ba
 
 `is-invalid` + `.invalid-feedback` is Bootstrap's error pattern — it needs no JS. Every input needs a `<label for>`.
 
+In a wizard project prefer the generated forms library, `bin/templates/lib/forms_bootstrap5.tpro`
+(`{{import "../lib/forms_bootstrap5.tpro" as f}}` from a page in a subfolder — the path is relative to the page —
+then `f.input`, `f.select`, `f.checkbox`, …): it writes this
+markup and reads values from `formModel` and messages from `formErrors`, both keyed by the control's `name`.
+Whatever you use, the error-map keys must be the ones the server fills — the wizard's convention is the
+lowercase field name (server side: the `dmvcframework-webapp` skill, "Form posts").
+
 ---
 
 ## 7. Common mistakes

@@ -281,6 +281,8 @@ ProblemDetails(StatusCode, Title, Detail = '', Instance = '');
 - `Ok(TObject)` serializes and **frees** the object (`Owns = True`) — works for `TObjectList<T>`,
   entities, `TJsonObject`.
 - `Ok(string)` wraps the string as `{"message": "..."}`.
+- `ProblemDetails(...)` is the RFC 7807 object itself, sent as `application/problem+json` (on 3.5.0-rc7 and
+  earlier it came out wrapped in `{"data": ...}` as `application/json`).
 - **Records cannot be returned.** There is no `Ok(record)` overload — build a class or a `TJsonObject`.
 - The result is mutable: `Result := Ok(lData); Result.StatusCode := 201;`
 - HTML: `RenderView` (§7) for a template; `Html(const AHtml: string)` for a small fragment with no template
@@ -363,7 +365,8 @@ lWeb.MapGet<TWebContext>('/customers',
     try
       ViewData['customers'] := lCustomers;
       // HTMX asks for the table only; a normal request gets the whole page
-      if Ctx.Request.IsHTMX and not Ctx.Request.HXIsBoosted then   // uses MVCFramework.HTMX
+      if Ctx.Request.IsHTMX and not Ctx.Request.HXIsBoosted
+         and not Ctx.Request.HXIsHistoryRestoreRequest then   // uses MVCFramework.HTMX
         Result := RenderView('customers/table')
       else
         Result := RenderView('customers/index');
@@ -399,8 +402,19 @@ Page vs fragment: the handler above; the template pair, TemplatePro and HTMX are
 - **Bound classes:** validated automatically if the class carries ≥1 validator attribute or descends from
   `TMVCValidatable` — after deserialization, before the handler runs.
 - **Bound records:** validated **unconditionally** (`ValidateRecord`); fields with validator attributes are checked.
+  Error keys are field names; no `OnValidate`, no nesting, and cross-field validators (`MVCCompareField`, …)
+  get no owner object and do not check — use a class for rules that span two fields.
 - Failure raises `EMVCValidationException` → rendered as RFC-7807 ProblemDetails with **422**
-  (binding errors raise `EMVCMinimalAPI` → **400**).
+  (binding errors → **400**: `EMVCMinimalAPI` for a route/query value, `EMVCException` for malformed JSON). The body has `"detail": "Validation failed for fields:
+  Email, FirstName"` plus an `"errors"` object with the per-field messages (`{"Email": "...", ...}`).
+  `errors` arrived after 3.5.0-rc7: on rc7 and earlier only `detail` is there.
+- Validators read **properties** of a class (fields of a record); on a `NullableXxx` property only
+  `MVCRequired` checks anything.
+- HTML form posts (`Ctx.Request.ContentFields`) are not validated for you: copy the fields into an object,
+  validate, re-render with `formModel`/`formErrors` and 422.
+
+The full attribute list, the error-map response, the form re-render pattern and custom validators are in the
+`dmvcframework` skill, `reference/validation.md`.
 
 ```delphi
 type
