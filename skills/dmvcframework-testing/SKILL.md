@@ -310,6 +310,9 @@ begin
     '{"firstName":"Bob","lastName":"X","email":"not-an-email"}');
   // validation failed => 422, and the action never ran
   Assert.AreEqual(HTTP_STATUS.UnprocessableEntity, lResp.StatusCode);
+  // keys are Delphi property names. Controller body: "items" holds "Email: <message>";
+  // Minimal API body: ProblemDetails, "errors": {"Email": "<message>"} (after 3.5.0-rc7)
+  Assert.Contains(lResp.Content, 'Email');
 end;
 
 procedure TCustomersTests.Delete_Returns204;
