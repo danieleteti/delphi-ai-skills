@@ -176,6 +176,11 @@ in the Project Manager → **DMVCFramework** → *New REST Controller...* (tick 
 Controller → Service), *New Service...*, *Add Database Connection...*. They generate the same layout; when
 the user prefers that, tell them which item to use instead of writing the files yourself.
 
+Controller and service share **one** model class, in its own unit: the items reuse the class when the project
+already declares it, otherwise they create `Entities.<Model>U.pas` — a `TMVCActiveRecord` entity, with the
+service's CRUD implemented through ActiveRecord, when the project has an ActiveRecord connection. Do the same
+by hand: never declare the model inside a controller or a service unit.
+
 ### Wizard-generated file overview
 
 ```
