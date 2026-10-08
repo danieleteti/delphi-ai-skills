@@ -62,6 +62,30 @@ finally
 end;
 ```
 
+**Handing the object to a new owner** — a function that returns it, a list that owns it, a framework
+response. Until the handoff it is still yours; anything that raises before it leaks the object. After the
+handoff, freeing it is a double free. So: `except`, not `finally`.
+
+```delphi
+// CORRECT — free only if we never reach the handoff
+var lObj := TFoo.Create;
+try
+  lObj.Load(AStream);            // can raise
+except
+  lObj.Free;
+  raise;
+end;
+Result := lObj;                  // handoff: the caller owns it now
+
+// BROKEN — leaks lObj when Load raises
+var lObj := TFoo.Create;
+lObj.Load(AStream);
+Result := lObj;
+```
+
+Keep the handoff itself **outside** the `try`: if it sits inside and something after it raises, the
+`except` frees an object that already has a new owner.
+
 ### `FreeAndNil` — and when it is a smell
 
 `System.SysUtils`: `procedure FreeAndNil(const [ref] Obj: TObject);` — it nils the reference **first**, then

@@ -628,6 +628,75 @@ Use `NullableXxx` types for optional PATCH fields — check `.HasValue` to detec
 
 ---
 
+## The two units every database needs
+
+The wizard generates no database code. Whoever adds ActiveRecord adds, for the database in use, **both**:
+
+| Database | FireDAC driver unit | `DriverID` | SQL generator unit |
+|----------|---------------------|-----------|--------------------|
+| PostgreSQL | `FireDAC.Phys.PG` | `PG` | `MVCFramework.SQLGenerators.PostgreSQL` |
+| Firebird | `FireDAC.Phys.FB` | `FB` | `MVCFramework.SQLGenerators.Firebird` |
+| InterBase | `FireDAC.Phys.IB` | `IB` | `MVCFramework.SQLGenerators.Interbase` |
+| MySQL, MariaDB | `FireDAC.Phys.MySQL` | `MySQL` | `MVCFramework.SQLGenerators.MySQL` |
+| SQL Server | `FireDAC.Phys.MSSQL` | `MSSQL` | `MVCFramework.SQLGenerators.MSSQL` |
+| Oracle | `FireDAC.Phys.Oracle` | `Ora` | `MVCFramework.SQLGenerators.Oracle` |
+| SQLite | `FireDAC.Phys.SQLite` | `SQLite` | `MVCFramework.SQLGenerators.Sqlite` |
+
+- Both units work by **registering themselves in `initialization`**: nothing in the code references them, so
+  nothing tells you they are missing until a request runs. Put them in the `uses` of the unit that creates
+  the connection def (`FDConnectionConfigU.pas`) or of the `.dpr`.
+- Missing driver unit → FireDAC cannot open the connection. Missing generator → the first ActiveRecord call
+  raises `ERQLCompilerNotFound` ("SQLGenerator not found for ..."). Both compile cleanly.
+- The generator unit also pulls in the RQL compiler (`MVCFramework.RQL.AST2PostgreSQL`, …): no extra unit.
+- **MariaDB** connects through the MySQL driver and is detected as `mysql` (`GetBackEndByConnection` maps
+  `RDBMSKind`, which has no MariaDB value) — so it needs the **MySQL** generator.
+- `FireDAC.DApt` and `FireDAC.Stan.Async` come in with `MVCFramework.ActiveRecord`; do not add them.
+- The driver also needs the database's **client library** at run time (`libpq.dll`, `fbclient.dll`,
+  `libmysql.dll`, …) next to the exe or on `PATH`. SQLite is statically linked and needs none.
+
+```delphi
+unit FDConnectionConfigU;
+
+interface
+
+const
+  CON_DEF_NAME = 'MyConnDef';
+
+procedure SetupDatabaseConnection;
+
+implementation
+
+uses
+  System.Classes,
+  FireDAC.Comp.Client,
+  FireDAC.Phys.PG,                          // the FireDAC driver
+  MVCFramework.SQLGenerators.PostgreSQL,    // the ActiveRecord SQL dialect
+  MVCFramework.Commons;                     // dotEnv
+
+procedure SetupDatabaseConnection;
+var
+  lParams: TStringList;
+begin
+  lParams := TStringList.Create;
+  try
+    lParams.Add('Database=' + dotEnv.Env('db.database', 'mydb'));
+    lParams.Add('Server=' + dotEnv.Env('db.host', 'localhost'));
+    lParams.Add('User_Name=' + dotEnv.Env('db.user', ''));
+    lParams.Add('Password=' + dotEnv.Env('db.password', ''));
+    lParams.Add('Pooled=True');
+    FDManager.AddConnectionDef(CON_DEF_NAME, 'PG', lParams);   // DriverID from the table
+  finally
+    lParams.Free;
+  end;
+end;
+
+end.
+```
+
+Call `SetupDatabaseConnection` once at startup, before `TMVCActiveRecordMiddleware` is created.
+
+---
+
 ## Connection per request — `TMVCActiveRecordMiddleware`
 
 ActiveRecord needs a connection bound to the current thread. In a server, that is the middleware's job:
