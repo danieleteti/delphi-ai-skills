@@ -248,6 +248,7 @@ the variable is dead — see `reference/memory.md`.
 | `List.Add(x)` on `TArray<T>` | `TList<T>`, or `SetLength` + index | Dynamic arrays have no methods; `TArray` is a class of static helpers in `System.Generics.Collections`. |
 | `try ... except ... finally ... end` | nest them: `try try ... except ... end; finally ... end;` | A single block cannot have both. This is a syntax error, not a style choice. |
 | `catch (E: Exception)` | `on E: Exception do` | And `except` without `on` catches everything. |
+| `lObj := Load; lObj.Save; Result := lObj;` | `try lObj.Save; except lObj.Free; raise; end; Result := lObj;` | Until the handoff the object is yours: if `Save` raises it leaks. `finally` would be a double free — the caller owns it after. `reference/memory.md` §1 |
 | Swallowing with `except end` | re-`raise`, or handle one specific class | A bare `except end` deletes the diagnosis. |
 | `with lObj do ...` | a local variable | `with` silently shadows identifiers; a later field added to `lObj` can hijack a name in the enclosing scope. Never generate `with`. |
 | A method that hides an ancestor's | `override` (virtual/dynamic), `reintroduce` (deliberate hiding), `overload` (same name, other signature) | Without `override` you get a *new* method: the ancestor still calls its own. Silent, and it compiles. |

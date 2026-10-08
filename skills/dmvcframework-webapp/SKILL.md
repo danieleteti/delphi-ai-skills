@@ -1115,9 +1115,9 @@ AEngine.AddController(TProductsController);
 | `MVCFramework.Middleware.StaticFiles` | `TMVCStaticFilesMiddleware` |
 | `MVCFramework.Middleware.Compression` | `TMVCCompressionMiddleware` |
 | `MVCFramework.JWT` | `TJWT`, `TJWTClaimsSetup`, `TJWTCheckableClaim` |
-| `MVCFramework.Commons` | `TMVCMediaType`, `AppPath`, `DMVCFRAMEWORK_VERSION` |
+| `MVCFramework.Commons` | `TMVCMediaType`, `AppPath`, `DMVCFRAMEWORK_VERSION`, `dotEnv`, `dotEnvConfigure` |
 | `MVCFramework.Container` | `IMVCServiceContainer`, `TRegistrationType` |
-| `MVCFramework.DotEnv` | `dotEnv`, `dotEnvConfigure`, `NewDotEnv` |
+| `MVCFramework.DotEnv` | `NewDotEnv` (the builder) |
 | `LoggerPro.Config` | `TLoggerProConfig.BuilderFromJSONFile` |
 
 ---

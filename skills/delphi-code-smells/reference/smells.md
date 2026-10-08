@@ -363,6 +363,11 @@ program is working.
 
 **Fix** `finally`. If you need both, nest: `finally` outside, `except` inside.
 
+**Not a smell when ownership is handed over right after the block** — `Result := lObj`, `List.Add(lObj)`
+on an owning list, `OKResponse(lObj)` in DMVCFramework. There `except Free; raise` is the correct idiom
+(`delphi` skill, `reference/memory.md`); turning it into `finally` frees an object the new owner will free
+again. The smell is `except Free; raise` followed by **more use** of the object and no handoff.
+
 **Detect**
 
 ```bash

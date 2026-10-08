@@ -486,6 +486,7 @@ end;
 | `function(Svc: TCustomerService)` | Only **interfaces** get DI. A class arg means body/query/group data |
 | Returning a record | No `Ok(record)` overload. Return a class or `TJsonObject` |
 | Freeing a bound arg / `TMVCFormFile.ContentStream` | Framework-owned. Do not free |
+| Object loaded, then `Update`/`Insert`/anything that can raise, then `Ok(x)` | Leaks on the exception: `Ok` owns it only once called. Wrap the stretch in `try ... except x.Free; raise; end` |
 | Adding a middleware after the first `MapXxx` | It will not run for minimal routes. Register middlewares first |
 | `procedure` handler | Handlers are always `function ... : IMVCResponse` |
 
