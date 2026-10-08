@@ -106,11 +106,13 @@ folder**. Look for these files in the working directory (a wizard project has th
 *.dpr                 the program: engine creation + server bootstrap
 EngineConfigU.pas     controllers + middleware registration   <- where most of your work lands
 BootConfigU.pas       dotEnv, LoggerPro, profiler
-EntitiesU.pas         entities
-ServicesU.pas         DI registrations (if the preset includes DI)
+ServicesU.pas         DI registrations: RegisterServices (on by default)
 Controllers.*.pas     controllers  (controller-based presets)
 RoutesU.pas           lambda routes (Minimal API presets)
 ```
+
+Projects from older wizards also have `EntitiesU.pas` (`TPerson`) and `Controllers.PeopleU.pas`: a demo whose
+actions are fakes (fixed person, fixed ID, update and delete that only log). **Never copy its pattern.**
 
 If they are there: read `*.dpr`, `EngineConfigU.pas` and any existing `Controllers.*.pas` / `RoutesU.pas`
 **before writing anything**, and match their conventions.
@@ -162,10 +164,17 @@ The wizard generates a specific layout. Always follow it:
 | Task | Where to act |
 |------|-------------|
 | Add a new controller | Create `Controllers.<Resource>U.pas`; add `uses` + `AEngine.AddController(...)` in `EngineConfigU.pas` |
-| Add an entity | Extend `EntitiesU.pas` or create `Entities.<Domain>U.pas` beside it |
+| Add a service | Create `Services.<Name>U.pas` (`I<Name>Service` + `T<Name>Service`); register it in `RegisterServices` (`ServicesU.pas`); inject it with `[MVCInject]` |
+| Add an entity | Create `Entities.<Domain>U.pas` (extend `EntitiesU.pas` if an older wizard left one) |
+| Use a database (ActiveRecord) | `FDConnectionConfigU.pas` with the FireDAC driver **and** the SQL generator of that database — `reference/activerecord.md` |
 | Add middleware | Add `AEngine.AddMiddleware(...)` inside `ConfigureEngine` in `EngineConfigU.pas` |
 | Change engine config | Edit the `TMVCEngine.Create` config lambda in the `.dpr` |
 | Change the port / settings | Edit `bin/.env` — the wizard reads it via `dotEnv`; do not hard-code |
+
+On Delphi 12 and later the user can do the first, second and fourth row from the IDE: right-click the project
+in the Project Manager → **DMVCFramework** → *New REST Controller...* (tick *Through a service* for
+Controller → Service), *New Service...*, *Add Database Connection...*. They generate the same layout; when
+the user prefers that, tell them which item to use instead of writing the files yourself.
 
 ### Wizard-generated file overview
 
@@ -174,10 +183,8 @@ MyProject/
 ├── MyProject.dpr              # Boot, RegisterServices, then RunServer — Indy Direct, no WebModule
 ├── BootConfigU.pas            # dotEnv + LoggerPro + profiler setup (do not modify)
 ├── EngineConfigU.pas          # ConfigureEngine() — add controllers/middleware HERE
-├── EntitiesU.pas              # Starter entity — extend as needed
-├── ServicesU.pas              # DI registrations (presets with a service container)
-├── Controllers.HomeU.pas      # Home controller — keep as reference
-├── Controllers.PeopleU.pas    # CRUD example — follow this pattern
+├── ServicesU.pas              # RegisterServices — add DI registrations HERE (on by default)
+├── Controllers.HomeU.pas      # Home controller — always there, keep it
 └── bin/.env                   # port, connection string, secrets — edit here, not in code
 ```
 
@@ -191,7 +198,6 @@ procedure ConfigureEngine(AEngine: TMVCEngine);
 begin
   // Controllers
   AEngine.AddController(THomeController);
-  AEngine.AddController(TPeopleController);
   AEngine.AddController(TProductsController);  // ← add new controllers here
   // Controllers - END
 
@@ -319,9 +325,8 @@ var
 begin
   lExisting := TMVCActiveRecord.GetByPk<TMyResource>(id);
   try
-    // TMVCActiveRecord.Assign does nothing: copy the fields (or override Assign in the entity)
-    lExisting.Name := Resource.Name;
-    // copy the other fields...
+    lExisting.Assign(Resource);   // every mapped field, the PK too (see Common Pitfalls)
+    lExisting.ID := id;           // the URL, not the body, picks the row
     lExisting.Update;
   except
     lExisting.Free;
@@ -744,7 +749,7 @@ In `EngineConfigU.pas`: add `uses Controllers.Products;` and
 - **Never `procedure + Render(...)`** — use `function` returning data or `IMVCResponse` factory methods
 - **Double free** — the framework frees the returned object. `Result := ToFree(x)` and `OKResponse(ToFree(x))` free it twice. `ToFree` is for objects you do NOT return
 - **Leak before the return** — the framework owns the object only once `OKResponse(x)` runs. Anything that can raise between loading it and returning it (`Update`, `Insert`, a validator, a DB error) leaks it: wrap that stretch in `try ... except x.Free; raise; end` (see `Update` in the CRUD example)
-- **`TMVCActiveRecord.Assign` is empty** — `lExisting.Assign(Body)` copies nothing, and the `Update` that follows writes the unchanged row. Copy the fields one by one, or override `Assign` in the entity
+- **`TMVCActiveRecord.Assign` copies the primary key too** — it copies every `[MVCTableField]` field whatever its options (PK, `foReadOnly`, `foVersion`, audit), streams by content. After `lExisting.Assign(Body)` set the PK back from the URL, or a body carrying another id updates another row. Older DMVCFramework builds have an empty `Assign` (`//do nothing` in `MVCFramework.ActiveRecord.pas`): if it copies nothing, the project is on one of those — copy the fields one by one
 - **No SQL generator / no FireDAC driver** — both register themselves in `initialization`; leave either out and it still compiles. Missing generator → `ERQLCompilerNotFound` on the first query. Add both with the first entity (`reference/activerecord.md`)
 - **`[MVCOwned]`** — deserialization hint only; the entity still creates and frees the list (`reference/activerecord.md`, Master-Detail)
 - **Nullable fields** — `NullableInt64`, `NullableString`, etc. from `MVCFramework.Nullables`; always check `.HasValue` before `.Value`

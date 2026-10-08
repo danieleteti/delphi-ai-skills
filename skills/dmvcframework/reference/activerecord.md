@@ -630,7 +630,7 @@ Use `NullableXxx` types for optional PATCH fields — check `.HasValue` to detec
 
 ## The two units every database needs
 
-The wizard generates no database code. Whoever adds ActiveRecord adds, for the database in use, **both**:
+Whoever adds ActiveRecord adds, for the database in use, **both**:
 
 | Database | FireDAC driver unit | `DriverID` | SQL generator unit |
 |----------|---------------------|-----------|--------------------|
@@ -694,6 +694,12 @@ end.
 ```
 
 Call `SetupDatabaseConnection` once at startup, before `TMVCActiveRecordMiddleware` is created.
+
+What the IDE already does (Delphi 12+, Project Manager → **DMVCFramework** → *Add Database Connection...*):
+it writes this unit for the chosen database, adds the `db.*` keys to `bin\.env`, and wires
+`SetupDatabaseConnection` plus the middleware into `ConfigureEngine`. The wizard's own ActiveRecord option
+uses `FDConnectionDefs.ini` instead, with SQLite enabled: its engine unit carries the SQLite driver and
+generator. Switching that project to another database means changing the `.ini` **and** those two units.
 
 ---
 

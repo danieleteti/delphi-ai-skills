@@ -62,13 +62,15 @@ project folder**. A Minimal API wizard project has:
 *.dpr              Boot + RegisterServices + RunServer  (Indy Direct by default; a WebModule here means WebBroker/ISAPI/Apache — also fine)
 BootConfigU.pas    dotEnv + LoggerPro
 EngineConfigU.pas  ConfigureEngine — view engine, exception handler, HTTP filters
-RoutesU.pas        ConfigureRoutes — YOUR ROUTES GO HERE
-ServicesU.pas      DI registrations
-EntitiesU.pas      entities
+RoutesU.pas        ConfigureRoutes — YOUR ROUTES GO HERE (one example: GET /api/v1/hello)
+ServicesU.pas      DI registrations: RegisterServices (on by default)
 bin/.env           port and settings
 ```
 
 Read `RoutesU.pas` and `EngineConfigU.pas` before writing anything, and follow their conventions.
+On Delphi 12 and later the user can add a route group or a service from the IDE: right-click the project in
+the Project Manager → **DMVCFramework** → *New Minimal API Route Group...* / *New Service...*; when they
+prefer that, tell them which item to use instead of writing the files yourself.
 
 **Step 2 — if there is no wizard project, stop.** Do not scaffold one. Tell the user:
 
