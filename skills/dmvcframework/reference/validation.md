@@ -412,7 +412,7 @@ begin
 end;
 ```
 
-Minimal API (`.AsWeb` group), as the generated `RoutesPeopleU` does:
+Minimal API (`.AsWeb` group):
 
 ```delphi
 lContacts.MapPost<TWebContext>('/new',
