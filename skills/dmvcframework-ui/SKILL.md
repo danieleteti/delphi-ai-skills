@@ -249,6 +249,6 @@ lowercase field name (server side: the `dmvcframework-webapp` skill, "Form posts
 |------|-----------|
 | `bin/templates/baselayout.html` | The layout: head, navbar, main, footer, toasts, theme toggle, Bootstrap JS |
 | `bin/www/css/style.css` | Brand tokens, primary override, 4 helpers, HTMX classes (~100 lines) |
-| `bin/www/` | Static root, served at `/static` by `TMVCStaticFilesMiddleware` |
+| `bin/www/` | Static root, served at `/static` by the `StaticFiles` HTTP filter (`TMVCStaticFilesMiddleware` in a 3.4 project) |
 
 Bootstrap docs: https://getbootstrap.com/docs/5.3/ — read the component page rather than guessing class names.

@@ -345,7 +345,7 @@ private
   fUpdatedBy: NullableString;
 end;
 
-// Middleware (or OnBeforeAction) sets the current user once per request:
+// An endpoint filter registered after the authentication one (or OnBeforeAction) sets the current user once per request:
 TMVCActiveRecord.SetCurrentUser(Context.LoggedUser.UserName);
 // All MVCAudit* fields read it automatically — no extra code in entities needed.
 ```
@@ -693,36 +693,41 @@ end;
 end.
 ```
 
-Call `SetupDatabaseConnection` once at startup, before `TMVCActiveRecordMiddleware` is created.
+Call `SetupDatabaseConnection` once at startup, before `ActiveRecordFilter` is registered.
 
 What the IDE already does (Delphi 12+, Project Manager → **DMVCFramework** → *Add Database Connection...*):
 it writes this unit for the chosen database, adds the `db.*` keys to `bin\.env`, and wires
-`SetupDatabaseConnection` plus the middleware into `ConfigureEngine`. The wizard's own ActiveRecord option
+`SetupDatabaseConnection` plus the connection-per-request filter (or middleware) into `ConfigureEngine`. The wizard's own ActiveRecord option
 uses `FDConnectionDefs.ini` instead, with SQLite enabled: its engine unit carries the SQLite driver and
 generator. Switching that project to another database means changing the `.ini` **and** those two units.
 
 ---
 
-## Connection per request — `TMVCActiveRecordMiddleware`
+## Connection per request — `ActiveRecordFilter`
 
-ActiveRecord needs a connection bound to the current thread. In a server, that is the middleware's job:
-it opens and binds the connection before routing and releases it after the action. Do **not** call
+ActiveRecord needs a connection bound to the current thread. In a server, that is the job of the
+`ActiveRecordFilter` HTTP filter (unit `MVCFramework.Filters.ActiveRecord`): it acquires the connection
+before the request is dispatched and releases it in a `finally`, also when the action raises. Do **not** call
 `ActiveRecordConnectionsRegistry.AddDefaultConnection` from controller code.
 
 ```delphi
-// the connection def is already registered (e.g. by SetupDatabaseConnection at startup)
-AEngine.AddMiddleware(TMVCActiveRecordMiddleware.Create('activerecorddb'));
+// loads the defs from FDConnectionDefs.ini (the default) once per process
+AEngine.UseHTTPFilter(ActiveRecordFilter('activerecorddb'));
 
-// ...or let the middleware load the def from an ini file
-AEngine.AddMiddleware(TMVCActiveRecordMiddleware.Create('activerecorddb', 'FDConnectionDefs.ini'));
+// the connection def is already registered (e.g. by SetupDatabaseConnection): '' skips the file
+AEngine.UseHTTPFilter(ActiveRecordFilter('activerecorddb', ''));
 
 // ...or bind extra named connections too (several databases in one request)
-AEngine.AddMiddleware(TMVCActiveRecordMiddleware.Create('maindb',
+AEngine.UseHTTPFilter(ActiveRecordFilter('maindb',
   ['reporting'], ['reportingdb'], 'FDConnectionDefs.ini'));
 ```
 
 Required whenever a controller touches `TMVCActiveRecord`, and **mandatory** for
-`TMVCActiveRecordController` (below).
+`TMVCActiveRecordController` (below). A Minimal API route group can use the endpoint filter
+`ActiveRecord(ConnectionDefName)` instead (same unit).
+
+Projects from a 3.4 wizard register `TMVCActiveRecordMiddleware` (same arguments): deprecated in 3.5, it
+still works; `ActiveRecordFilter` is its replacement.
 
 ---
 
@@ -747,12 +752,12 @@ ownership scope (see the `dmvcframework-security` skill).
 ## Automatic REST CRUD — `TMVCActiveRecordController`
 
 A whole CRUD API over your entities, with no controller of your own. Register the controller, the
-middleware, and the entities you want exposed:
+connection filter, and the entities you want exposed:
 
 ```delphi
 // EngineConfigU.pas
 AEngine.AddController(TMVCActiveRecordController, '/api/entities');
-AEngine.AddMiddleware(TMVCActiveRecordMiddleware.Create(CON_DEF_NAME));   // REQUIRED
+AEngine.UseHTTPFilter(ActiveRecordFilter(CON_DEF_NAME, ''));   // REQUIRED ('' : def registered in code)
 
 // EntitiesU.pas — the URL segment for each entity
 initialization

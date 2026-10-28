@@ -108,9 +108,6 @@ begin
   AEngine.AddController(THomeController);
   // Controllers - END
 
-  // Middleware
-  // Middleware - END
-
   AEngine.PublishObject(
     function: TObject
     begin
@@ -459,9 +456,11 @@ per-request, so stashing `Context` in a field from `OnBeforeCallHook` is safe.
 
 ## 8. Authentication
 
-The JSON-RPC endpoint is a controller, so the standard middleware applies unchanged — add
-`TMVCJWTAuthenticationMiddleware` or `TMVCBasicAuthenticationMiddleware` in `ConfigureEngine` exactly as
-documented in `dmvcframework`, and use the `dmvcframework-security` skill for hardening.
+The JSON-RPC endpoint is a controller, so the standard authentication filters apply unchanged — add
+`JWTLoginFilter` + `JWT` (or `BasicAuth(handler)`) in `ConfigureEngine` exactly as documented in
+`dmvcframework`: the engine-wide endpoint filter (`UseEndpointFilter`) runs for the published object too. Use
+the `dmvcframework-security` skill for hardening. (A 3.4 project may have `TMVCJWTAuthenticationMiddleware`
+or `TMVCBasicAuthenticationMiddleware`: deprecated in 3.5, still working.)
 
 What is different:
 
@@ -598,8 +597,8 @@ end.
 
 ```delphi
 uses
-  Controllers.HomeU, JSONRPCServiceU, MVCFramework.JSONRPC, MVCFramework.Middleware.CORS,
-  MVCFramework.Middleware.ActiveRecord;
+  Controllers.HomeU, JSONRPCServiceU, MVCFramework.JSONRPC, MVCFramework.Filters,
+  MVCFramework.Filters.ActiveRecord;
 
 procedure ConfigureEngine(AEngine: TMVCEngine);
 begin
@@ -607,11 +606,10 @@ begin
   AEngine.AddController(THomeController);
   // Controllers - END
 
-  // Middleware
-  AEngine.AddMiddleware(TMVCCORSMiddleware.Create);
+  // HTTPFilter chain (engine-wide). Order matters: first = outermost
+  AEngine.UseHTTPFilter(CORS('*'));
   // GetCustomer/SearchCustomers use ActiveRecord: it needs a connection per request
-  AEngine.AddMiddleware(TMVCActiveRecordMiddleware.Create('MyConnDef'));
-  // Middleware - END
+  AEngine.UseHTTPFilter(ActiveRecordFilter('MyConnDef'));
 
   AEngine.PublishObject(
     function: TObject
