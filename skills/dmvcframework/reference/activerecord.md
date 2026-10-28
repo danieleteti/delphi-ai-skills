@@ -693,7 +693,7 @@ end;
 end.
 ```
 
-Call `SetupDatabaseConnection` once at startup, before `ActiveRecordFilter` is registered.
+Call `SetupDatabaseConnection` once at startup, before `ActiveRecordHTTPFilter` is registered.
 
 What the IDE already does (Delphi 12+, Project Manager → **DMVCFramework** → *Add Database Connection...*):
 it writes this unit for the chosen database, adds the `db.*` keys to `bin\.env`, and wires
@@ -703,31 +703,31 @@ generator. Switching that project to another database means changing the `.ini` 
 
 ---
 
-## Connection per request — `ActiveRecordFilter`
+## Connection per request — `ActiveRecordHTTPFilter`
 
 ActiveRecord needs a connection bound to the current thread. In a server, that is the job of the
-`ActiveRecordFilter` HTTP filter (unit `MVCFramework.Filters.ActiveRecord`): it acquires the connection
+`ActiveRecordHTTPFilter` HTTP filter (unit `MVCFramework.Filters.ActiveRecord`): it acquires the connection
 before the request is dispatched and releases it in a `finally`, also when the action raises. Do **not** call
 `ActiveRecordConnectionsRegistry.AddDefaultConnection` from controller code.
 
 ```delphi
 // loads the defs from FDConnectionDefs.ini (the default) once per process
-AEngine.UseHTTPFilter(ActiveRecordFilter('activerecorddb'));
+AEngine.Use(ActiveRecordHTTPFilter('activerecorddb'));
 
 // the connection def is already registered (e.g. by SetupDatabaseConnection): '' skips the file
-AEngine.UseHTTPFilter(ActiveRecordFilter('activerecorddb', ''));
+AEngine.Use(ActiveRecordHTTPFilter('activerecorddb', ''));
 
 // ...or bind extra named connections too (several databases in one request)
-AEngine.UseHTTPFilter(ActiveRecordFilter('maindb',
+AEngine.Use(ActiveRecordHTTPFilter('maindb',
   ['reporting'], ['reportingdb'], 'FDConnectionDefs.ini'));
 ```
 
 Required whenever a controller touches `TMVCActiveRecord`, and **mandatory** for
 `TMVCActiveRecordController` (below). A Minimal API route group can use the endpoint filter
-`ActiveRecord(ConnectionDefName)` instead (same unit).
+`ActiveRecordEndpointFilter(ConnectionDefName)` instead (same unit).
 
 Projects from a 3.4 wizard register `TMVCActiveRecordMiddleware` (same arguments): deprecated in 3.5, it
-still works; `ActiveRecordFilter` is its replacement.
+still works; `ActiveRecordHTTPFilter` is its replacement.
 
 ---
 
@@ -757,7 +757,7 @@ connection filter, and the entities you want exposed:
 ```delphi
 // EngineConfigU.pas
 AEngine.AddController(TMVCActiveRecordController, '/api/entities');
-AEngine.UseHTTPFilter(ActiveRecordFilter(CON_DEF_NAME, ''));   // REQUIRED ('' : def registered in code)
+AEngine.Use(ActiveRecordHTTPFilter(CON_DEF_NAME, ''));   // REQUIRED ('' : def registered in code)
 
 // EntitiesU.pas — the URL segment for each entity
 initialization

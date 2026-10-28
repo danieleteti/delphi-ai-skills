@@ -456,9 +456,9 @@ per-request, so stashing `Context` in a field from `OnBeforeCallHook` is safe.
 
 ## 8. Authentication
 
-The JSON-RPC endpoint is a controller, so the standard authentication filters apply unchanged — add
-`JWTLoginFilter` + `JWT` (or `BasicAuth(handler)`) in `ConfigureEngine` exactly as documented in
-`dmvcframework`: the engine-wide endpoint filter (`UseEndpointFilter`) runs for the published object too. Use
+The JSON-RPC endpoint is a controller, so the standard authentication bundles apply unchanged — add
+`AEngine.Use(JWTAuthenticationBundle(...))` (or `AEngine.Use(BasicAuthenticationBundle(handler))`) in `ConfigureEngine` exactly as documented in
+`dmvcframework`: the check of the bundle, an engine-wide endpoint filter, runs for the published object too. Use
 the `dmvcframework-security` skill for hardening. (A 3.4 project may have `TMVCJWTAuthenticationMiddleware`
 or `TMVCBasicAuthenticationMiddleware`: deprecated in 3.5, still working.)
 
@@ -607,9 +607,9 @@ begin
   // Controllers - END
 
   // HTTPFilter chain (engine-wide). Order matters: first = outermost
-  AEngine.UseHTTPFilter(CORS('*'));
+  AEngine.Use(CORSHTTPFilter('*'));
   // GetCustomer/SearchCustomers use ActiveRecord: it needs a connection per request
-  AEngine.UseHTTPFilter(ActiveRecordFilter('MyConnDef'));
+  AEngine.Use(ActiveRecordHTTPFilter('MyConnDef'));
 
   AEngine.PublishObject(
     function: TObject

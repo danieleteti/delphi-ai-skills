@@ -177,6 +177,6 @@ end.
 
 Supported FireDAC DriverIDs: `PG` (PostgreSQL), `MySQL`, `FB` (Firebird), `IB` (Interbase), `MSSQL`, `SQLite`.
 
-Call `SetupDatabaseConnection` once at startup, before the engine registers `ActiveRecordFilter` (`TMVCActiveRecordMiddleware` in projects from a 3.4 wizard).
+Call `SetupDatabaseConnection` once at startup, before the engine registers `ActiveRecordHTTPFilter` (`TMVCActiveRecordMiddleware` in projects from a 3.4 wizard).
 
 ---
