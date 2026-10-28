@@ -356,7 +356,7 @@ var
   lResp: IMVCRESTResponse;
   lJSON: TJDOJsonObject;
 begin
-  // JWTLoginFilter (the JWT middleware, in a 3.4 project) serves the login URL you configured (e.g. '/login');
+  // JWTAuthenticationBundle (the JWT middleware, in a 3.4 project) serves the login URL you configured (e.g. '/login');
   // a separate client, so the Basic header does not stay on FClient
   lResp := TMVCRESTClient.New.BaseURL(TEST_HOST, TEST_PORT)
     .SetBasicAuthorization(AUser, APassword)
@@ -364,7 +364,7 @@ begin
   Assert.AreEqual(HTTP_STATUS.OK, lResp.StatusCode);
   lJSON := lResp.ToJSONObject;
   try
-    Result := lJSON.S['token'];
+    Result := lJSON.S['token'];   // 'access_token' when the bundle has a RefreshTokenStore
   finally
     lJSON.Free;
   end;
@@ -421,7 +421,7 @@ DELETE is still a breach.
 ## 8. Database-backed tests
 
 For tests that need a real database, configure FireDAC in `[SetupFixture]`
-**before** starting the server. The wizard's `ConfigureEngine` already registers `ActiveRecordFilter`
+**before** starting the server. The wizard's `ConfigureEngine` already registers `ActiveRecordHTTPFilter`
 (`TMVCActiveRecordMiddleware` in a 3.4 project) with the connection named by
 `firedac.connection_definition_name` in `.env`: set it to `TestConn` in the test `.env` — without it no
 connection is bound to the request and every ActiveRecord call fails.
@@ -466,7 +466,7 @@ begin
     LParams.Free;
   end;
 
-  // 2. Start the in-process server (the engine's ActiveRecord filter uses 'TestConn')
+  // 2. Start the in-process server (the engine's ActiveRecordHTTPFilter uses 'TestConn')
   FServer := StartTestServer(9998, FEngine);
 end;
 

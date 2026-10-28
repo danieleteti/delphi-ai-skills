@@ -127,8 +127,7 @@ Key invariants:
 ```delphi
 procedure ConfigureEngine(AEngine: TMVCEngine);
 var
-  lJWTClaimsSetup: TJWTClaimsSetup;
-  lJWTCookie: TMVCAuthCookieOptions;
+  lJWT: TMVCJWTCookieAuthenticationOptions;
   lWwwPath: string;
 begin
   lWwwPath := TPath.Combine(AppPath, 'www');
@@ -140,31 +139,32 @@ begin
   // Server-Side View Engine
   AEngine.SetViewEngine(TMVCTemplateProViewEngine);
 
-  // HTTPFilter chain (engine-wide, before routing). Order matters: first = outermost
-  AEngine.UseHTTPFilter(Redirect(['/'], '/web'));
-  AEngine.UseHTTPFilter(StaticFiles('/static', lWwwPath));
-  AEngine.UseHTTPFilter(Compression(1024));
-  AEngine.UseHTTPFilter(FileSessionFilter(0, TPath.Combine(AppPath, 'sessions'),
+  // Filter chain (engine-wide). Order matters: first = outermost
+  AEngine.Use(RedirectHTTPFilter(['/'], '/web'));
+  AEngine.Use(FileServerBundle('/static', lWwwPath));                   // files + Range, before routing
+  AEngine.Use(CompressionHTTPFilter(1024));
+  AEngine.Use(FileSessionHTTPFilter(0, TPath.Combine(AppPath, 'sessions'),
     SessionCookieFlags(dotEnv.Env('SESSION_COOKIE_SECURE', True))));   // HttpOnly, + Secure
 
-  // JWT claims setup (what goes into every issued token)
-  lJWTClaimsSetup := procedure(const JWT: TJWT)
+  // JWT in an HTTP-only cookie, one bundle: POST /login issues it and /logout expires it (before
+  // routing), every routed request is checked (after routing)
+  lJWT := TMVCJWTCookieAuthenticationOptions.Default;   // Cookie: HttpOnly, Secure, SameSite=Strict
+  lJWT.Handler := TAuthentication.Create;
+  lJWT.ClaimsSetup := procedure(const JWT: TJWT)         // what goes into every issued token
     begin
       JWT.Claims.Issuer := dotEnv.Env('JWT_ISSUER', 'MyApp');
       JWT.Claims.ExpirationTime := Now + OneHour;
       JWT.Claims.NotBefore := Now - OneMinute * 5;
       JWT.Claims.IssuedAt := Now;
     end;
-
-  // JWT in an HTTP-only cookie: POST /login issues it, /logout expires it (HTTP filter);
-  // JWTCookie checks it on every routed request (endpoint filter)
-  lJWTCookie := TMVCAuthCookieOptions.Default;   // HttpOnly, Secure, SameSite=Strict
-  lJWTCookie.Secure := dotEnv.Env('JWT_COOKIE_SECURE', True);
-  AEngine.UseHTTPFilter(JWTCookieLoginFilter(TAuthentication.Create, lJWTClaimsSetup,
-    dotEnv.Env('JWT_SECRET'),  // no fallback: a missing key must fail, not sign with a public string
-    lJWTCookie, '/login', '/logout'));
-  AEngine.UseEndpointFilter(JWTCookie(TAuthentication.Create, dotEnv.Env('JWT_SECRET'), lJWTCookie,
-    [TJWTCheckableClaim.ExpirationTime, TJWTCheckableClaim.NotBefore, TJWTCheckableClaim.IssuedAt]));
+  lJWT.Secret := dotEnv.Env('JWT_SECRET');  // no fallback: a missing key must fail, not sign with a public string
+  lJWT.ClaimsToCheck := [TJWTCheckableClaim.ExpirationTime, TJWTCheckableClaim.NotBefore, TJWTCheckableClaim.IssuedAt];
+  lJWT.Cookie.Secure := dotEnv.Env('JWT_COOKIE_SECURE', True);
+  // only these origins may POST /login (403 otherwise)
+  lJWT.LoginAllowedOrigins := dotEnv.Env('LOGIN_ALLOWED_ORIGINS', '').Split([',']);
+  if Length(lJWT.LoginAllowedOrigins) = 0 then // the bundle would check no origin
+    raise Exception.Create('LOGIN_ALLOWED_ORIGINS is empty: set it in .env, the origins a browser may POST /login from');
+  AEngine.Use(JWTCookieAuthenticationBundle(lJWT));
 
   // Browser-friendly error pages: renders templates/error.html for clients that prefer HTML,
   // leaves the JSON error body untouched for API clients. One call — no handler to hand-write.
@@ -190,8 +190,10 @@ uses
   TemplatePro,
   MVCFramework.View.Renderers.TemplatePro,
   MVCFramework.Filters,
+  MVCFramework.Filters.Authentication,
   MVCFramework.JWT,
   MVCFramework.Commons,
+  System.SysUtils,
   System.IOUtils,
   System.DateUtils;
 ```
@@ -301,7 +303,7 @@ A `TDataSet` (e.g. a `TFDMemTable`) can be passed as `ViewData` the same way, an
 ### Accessing session data and current user in a controller
 
 ```delphi
-// After the JWTCookie filter (or UseJWTCookieAuthentication), the session is validated automatically.
+// After JWTCookieAuthenticationBundle (or UseJWTCookieAuthentication), the session is validated automatically.
 // Access claims from the JWT token:
 var lUsername := Context.LoggedUser.UserName;
 var lRoles    := Context.LoggedUser.Roles;  // TList<string>
@@ -769,7 +771,7 @@ end;
 </form>
 ```
 
-The `/login` route is handled by `JWTCookieLoginFilter` (by `UseJWTCookieAuthentication` in a 3.4 project),
+The `/login` route is handled by the login of `JWTCookieAuthenticationBundle` (by `UseJWTCookieAuthentication` in a 3.4 project),
 which a plain HTML form does not fit:
 
 - **Field names.** Form data is read only as `jwtusername` / `jwtpassword`
@@ -957,10 +959,16 @@ bin/www/
   site.webmanifest       → /static/site.webmanifest
 ```
 
-Filter declaration (`MVCFramework.Filters`; a 3.4 project has the deprecated `TMVCStaticFilesMiddleware`):
+Declaration (`MVCFramework.Filters`; a 3.4 project has the deprecated `TMVCStaticFilesMiddleware`):
 ```delphi
-AEngine.UseHTTPFilter(StaticFiles('/static', TPath.Combine(AppPath, 'www')));
+AEngine.Use(FileServerBundle('/static', TPath.Combine(AppPath, 'www')));
 ```
+
+`FileServerBundle` sends the MIME type, `Last-Modified` (304 on a conditional GET), the default document of a
+folder, refuses path traversal, and answers 206 to a `Range` request (audio, video, resumable downloads).
+`StaticFilesHTTPFilter('/static', ...)` is the same without Range. `FileServerBundle('/', lWwwPath, fsmSPA)` serves a
+single-page app: a GET/HEAD with no route gets `index.html`, the API routes stay. More switches in
+`TMVCFileServerOptions` (`Flags`, `Rules`, `MediaTypesCustomizer`).
 
 In templates: `<link rel="stylesheet" href="/static/css/style.css">`
 
@@ -988,6 +996,9 @@ JWT_SECRET=<generated>
 JWT_ISSUER=MyApp
 # Set to false only for local development over plain HTTP.
 JWT_COOKIE_SECURE=true
+# Origins (comma separated) a browser may POST /login from; any other origin is
+# refused (login CSRF). Add the public address of the site, e.g. https://www.example.com
+LOGIN_ALLOWED_ORIGINS=http://localhost:8080,https://localhost:8080
 SESSION_COOKIE_SECURE=true
 
 # Logging
@@ -1092,7 +1103,7 @@ AEngine.AddController(TProductsController);
 | `JWT_COOKIE_SECURE=true` with HTTP | Cookie won't be sent by the browser over plain HTTP. Use `false` during local dev, `true` in production with HTTPS. |
 | View cache enabled during development | `dmvc.view_cache=true` caches compiled templates — template changes won't appear until restart. Use `false` in dev. |
 | `SetExceptionHandler` handles all requests | Check `WebContext.Request.ClientPreferHTML` first and `Exit` if false — otherwise API clients get an HTML error page. |
-| Static file not found | File must be under `bin/www/`. The URL prefix is `/static`, not `/www`. `StaticFiles` answers before routing, so the auth endpoint filter never sees it; declare it after `Redirect`. |
+| Static file not found | File must be under `bin/www/`. The URL prefix is `/static`, not `/www`. `FileServerBundle` answers before routing, so the check of the authentication bundle never sees it; declare it after `RedirectHTTPFilter`. |
 | Template variable silently empty | TemplatePro doesn't error on missing keys by default. Add a breakpoint after `ViewData[...]` assignments to verify they are set. |
 | `{{for item in list}}` doesn't iterate | The list must be a `TObjectList<T>` or array registered in ViewData. Ensure the service returns a non-nil, non-empty list. |
 | HTMX response headers ignored | HTMX checks for `HX-*` headers only on responses to HTMX requests (requests with `HX-Request: true` header). Verify the button/div has a `hx-*` trigger attribute. |
@@ -1107,7 +1118,8 @@ AEngine.AddController(TProductsController);
 | `MVCFramework.View.Renderers.TemplatePro` | `TMVCTemplateProViewEngine` |
 | `TemplatePro` | `TTProCompiler.CompileAndRender`, `TTProConfiguration`, `ITProCompiledTemplate` |
 | `TemplatePro.Types` | `TFilterParameter` |
-| `MVCFramework.Filters` | `Redirect`, `StaticFiles`, `Compression`, `FileSessionFilter`, `SessionCookieFlags`, `JWTCookieLoginFilter`, `JWTCookie`, `TMVCAuthCookieOptions` |
+| `MVCFramework.Filters` | `RedirectHTTPFilter`, `FileServerBundle`, `StaticFilesHTTPFilter`, `CompressionHTTPFilter`, `FileSessionHTTPFilter`, `SessionCookieFlags`, `TMVCAuthCookieOptions` |
+| `MVCFramework.Filters.Authentication` | `JWTCookieAuthenticationBundle`, `TMVCJWTCookieAuthenticationOptions` |
 | `MVCFramework.Middleware.*` | The classic middleware of 3.4 projects (`UseJWTCookieAuthentication`, `UseFileSessionMiddleware`, `TMVCStaticFilesMiddleware`, …) — deprecated in 3.5 |
 | `MVCFramework.JWT` | `TJWT`, `TJWTClaimsSetup`, `TJWTCheckableClaim` |
 | `MVCFramework.Commons` | `TMVCMediaType`, `AppPath`, `DMVCFRAMEWORK_VERSION`, `dotEnv`, `dotEnvConfigure` |

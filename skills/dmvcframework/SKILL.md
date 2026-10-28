@@ -1,6 +1,6 @@
 ---
 name: dmvcframework
-description: Use when writing any server-side feature with DelphiMVCFramework (DMVC) — controllers, routes, REST endpoints, entities, filters and middleware, validation, dependency injection, JWT, SSE, or the server bootstrap. The core skill; the Minimal API, web-app, UI, security and testing skills build on it. Triggers on "DMVCFramework", "DelphiMVCFramework", "create a controller", "add a route", "REST endpoint in Delphi", "TMVCActiveRecord", "ActiveRecord entity", "add middleware", "add a filter", "configure JWT", "MVCRequired", "add validation", "service container", "MVCInject".
+description: Use when writing any server-side feature with DelphiMVCFramework (DMVC) — controllers, routes, REST endpoints, entities, filters and middleware, validation, dependency injection, JWT, SSE, or the server bootstrap. The core skill; the Minimal API, web-app, UI, security and testing skills build on it. Triggers on "DMVCFramework", "DelphiMVCFramework", "create a controller", "add a route", "REST endpoint in Delphi", "TMVCActiveRecord", "ActiveRecord entity", "add middleware", "add a filter", "filter bundle", "configure JWT", "MVCRequired", "add validation", "service container", "MVCInject".
 ---
 
 # DMVCFramework Development Guide
@@ -19,10 +19,13 @@ describe a different release and that names may have changed. If you
 need a signature they do not cover, or you suspect the framework has moved on, **do not invent a name and do
 not answer from memory** — a plausible-but-wrong identifier costs the user a compile error and their trust.
 
-**The filter API arrived after 3.5.0-rc8.** `UseEndpointFilter`, `JWTLoginFilter` + `JWT(handler, secret, …)`,
-the session, ActiveRecord and authentication filters, and the deprecation of the classic middleware come with
-the releases after rc8. On rc8 and earlier `JWT(...)` still takes the claims setup and the login URL,
-`MemorySession` takes two Booleans, the CORS HTTP filter is `CORSFilter`, and most of the rest does not exist:
+**The filter API arrived after 3.5.0-rc8.** `AEngine.Use(...)` (one verb for HTTP filters, endpoint filters and
+filter bundles), the authentication bundles (`JWTAuthenticationBundle`, …), `FileServerBundle`, the session,
+ActiveRecord and request-guard filters, and the deprecation of the classic middleware come with the releases after
+rc8. On rc8 and earlier the engine registers an HTTP filter with `UseHTTPFilter` and has no engine-wide endpoint
+filter, the filter names have no `HTTPFilter`/`EndpointFilter` suffix, `JWT(...)`
+still takes the claims setup and the login URL, `MemorySession` takes two Booleans, the CORS HTTP filter is
+`CORSFilter` (`CORS` is the endpoint one), and most of the rest does not exist:
 there, write the classic middleware (`AddMiddleware`).
 
 Verify, in this order:
@@ -173,7 +176,7 @@ The wizard generates a specific layout. Always follow it:
 | Add a service | Create `Services.<Name>U.pas` (`I<Name>Service` + `T<Name>Service`); register it in `RegisterServices` (`ServicesU.pas`); inject it with `[MVCInject]` |
 | Add an entity | Create `Entities.<Domain>U.pas` (extend `EntitiesU.pas` if an older wizard left one) |
 | Use a database (ActiveRecord) | `FDConnectionConfigU.pas` with the FireDAC driver **and** the SQL generator of that database — `reference/activerecord.md` |
-| Add CORS, compression, static files, sessions, auth… | A filter: `AEngine.UseHTTPFilter(...)` / `AEngine.UseEndpointFilter(...)` inside `ConfigureEngine` in `EngineConfigU.pas` (see *Filters*) |
+| Add CORS, compression, static files, sessions, auth… | A filter or a filter bundle: `AEngine.Use(...)` inside `ConfigureEngine` in `EngineConfigU.pas` (see *Filters*) |
 | Change engine config | Edit the `TMVCEngine.Create` config lambda in the `.dpr` |
 | Change the port / settings | Edit `bin/.env` — the wizard reads it via `dotEnv`; do not hard-code |
 
@@ -213,7 +216,7 @@ begin
   // Controllers - END
 
   // HTTPFilter chain (engine-wide). Order matters: first = outermost.
-  AEngine.UseHTTPFilter(CORS('*'));            // ← add filters here (MVCFramework.Filters)
+  AEngine.Use(CORSHTTPFilter('*'));                      // ← add filters here (MVCFramework.Filters)
 end;
 ```
 
@@ -600,83 +603,144 @@ procedure OnValidation(const Action: TMVCEntityAction); override; // validation
 ## Filters (and the classic middleware)
 
 In 3.5 every classic middleware is `deprecated` in favour of a **filter** (`MVCFramework.Filters`), and the
-wizard generates filters. Two kinds, both registered inside `ConfigureEngine` (in a WebBroker project too — it
-is called from `WebModuleCreate`):
+wizard generates filters. Two kinds, plus the bundles that hold both, all registered with `AEngine.Use(...)` inside
+`ConfigureEngine` (in a WebBroker project too — it is called from `WebModuleCreate`):
 
-- **HTTP filter** — `AEngine.UseHTTPFilter(...)`: before routing, on every request (a 404 too). CORS, static
-  files, compression, sessions, ActiveRecord, rate limit, and the logins (they need no route).
-- **Endpoint filter** — `AEngine.UseEndpointFilter(...)`: after routing, only when a route matches —
-  controller actions and Minimal API routes. The check of an authentication.
+- **HTTP filter** — `AEngine.Use(XxxHTTPFilter(...))`: before routing, on every request (a 404 too). CORS, static
+  files, compression, sessions, ActiveRecord, rate limit, request guards.
+- **Endpoint filter** — `AEngine.Use(XxxEndpointFilter(...))`: after routing, only when a route matches —
+  controller actions and Minimal API routes. `AuthorizeEndpointFilter`, `RequireRoleEndpointFilter`.
+- **Filter bundle** — `AEngine.Use(XxxBundle(...))`: an `IMVCFilterBundle`, HTTP filters and endpoint filters that
+  go together, registered by one call. Every authentication mechanism is one (its login, if it has one, before
+  routing, the check after it, with the same handler and secret), and so is `FileServerBundle` (static files plus Range).
 
-Both return `TMVCEngine`, so they chain. The first registered is the outermost. Order matters:
+`Use` is one method with three overloads: the suffix of the argument's name (`HTTPFilter`, `EndpointFilter`,
+`Bundle`) says which. It returns `TMVCEngine`, so calls chain. The first registered is the outermost. Order matters:
 
 ```delphi
-// uses MVCFramework.Filters, MVCFramework.Filters.ActiveRecord, MVCFramework.JWT
-// CORS first: it answers the preflight (OPTIONS) before routing and before the login
-AEngine.UseHTTPFilter(CORS('*'));
+// uses MVCFramework.Filters, MVCFramework.Filters.Authentication, MVCFramework.Filters.ActiveRecord, MVCFramework.JWT
+// var lJWT: TMVCJWTAuthenticationOptions;
 
-// ETag before Compression, so the hash is taken on the bytes actually sent
-AEngine.UseHTTPFilter(ETag()).UseHTTPFilter(Compression(1024));
+// CORSHTTPFilter first: it answers the preflight (OPTIONS) before routing and before the login
+AEngine.Use(CORSHTTPFilter('*'));
 
-// Serve static files
-AEngine.UseHTTPFilter(StaticFiles('/app', TPath.Combine(AppPath, 'www')));
+// ETagHTTPFilter before CompressionHTTPFilter, so the hash is taken on the bytes actually sent
+AEngine.Use(ETagHTTPFilter()).Use(CompressionHTTPFilter(1024));
+
+// Serve a folder: MIME type, Last-Modified/304, default document, path traversal refused, Range (206)
+AEngine.Use(FileServerBundle('/app', TPath.Combine(AppPath, 'www')));
 
 // A connection per request for ActiveRecord (required when using the ORM).
 // The connection def must exist, and the project must use FireDAC.Phys.<db> AND
 // MVCFramework.SQLGenerators.<db> — see reference/activerecord.md, "The two units every database needs"
-AEngine.UseHTTPFilter(ActiveRecordFilter('MyConnDef'));
+AEngine.Use(ActiveRecordHTTPFilter('MyConnDef'));
 
-// JWT: the login is an HTTP filter (POST /auth/login answers {"token": "..."}),
-// the check of every routed request an endpoint filter. The claims setup is MANDATORY
-AEngine.UseHTTPFilter(JWTLoginFilter(TMyAuthHandler.Create,
-  procedure(const JWT: TJWT)                    // TJWTClaimsSetup
+// JWT, one bundle: the login (POST /auth/login answers {"token": "..."}) and the check of every
+// routed request. The claims setup is MANDATORY
+lJWT := TMVCJWTAuthenticationOptions.Default;
+lJWT.Handler := TMyAuthHandler.Create;
+lJWT.ClaimsSetup := procedure(const JWT: TJWT)
   begin
     JWT.Claims.Issuer := 'MyApp';
     JWT.Claims.ExpirationTime := Now + OneHour;
     JWT.Claims.NotBefore := Now - OneMinute * 5;
     JWT.Claims.IssuedAt := Now;
-  end,
-  dotEnv.Env('JWT_SECRET'),                     // no fallback: a missing key must fail
-  '/auth/login'));
-AEngine.UseEndpointFilter(JWT(TMyAuthHandler.Create, dotEnv.Env('JWT_SECRET'),
-  [TJWTCheckableClaim.ExpirationTime, TJWTCheckableClaim.NotBefore, TJWTCheckableClaim.IssuedAt]));
+  end;
+lJWT.Secret := dotEnv.Env('JWT_SECRET');             // no fallback: a missing key must fail
+lJWT.LoginURL := '/auth/login';
+lJWT.ClaimsToCheck := [TJWTCheckableClaim.ExpirationTime, TJWTCheckableClaim.NotBefore, TJWTCheckableClaim.IssuedAt];
+AEngine.Use(JWTAuthenticationBundle(lJWT));
+// the short form checks the expiration only:
+// AEngine.Use(JWTAuthenticationBundle(TMyAuthHandler.Create, lClaimsSetup, dotEnv.Env('JWT_SECRET'), '/auth/login'));
 
-// ...or Basic authentication
-// (the cast picks the handler overload: without it the call does not compile, E2250)
-// AEngine.UseEndpointFilter(BasicAuth(TMyAuthHandler.Create as IMVCAuthenticationHandler));
+// ...or Basic authentication (an endpoint part only)
+// AEngine.Use(BasicAuthenticationBundle(TMyAuthHandler.Create));
 ```
 
 Rules that bite:
 
+- **A filter function without arguments needs `()`**: `Use(ETagHTTPFilter())`, `Use(AuthorizeEndpointFilter())`.
+  Without them the call does not compile (*E2250 There is no overloaded version of 'Use'*).
+- **A bundle is registered once.** The same bundle (the same instance) twice on the engine, on the engine and on
+  a Minimal API group, or on a group and a group nested in it, raises `EMVCConfigException` at the second `Use`. On
+  two sibling groups it is allowed: its HTTP part goes on the engine once. A bundle with no endpoint part
+  (`FileServerBundle`) goes on the engine: on a group it raises. An empty bundle does nothing; a nil one raises. Your own:
+  `TMVCFilterBundle.Create([HTTP filters], [endpoint filters])`, each list in its order — an endpoint filter held
+  in a **variable** inside `[...]` is called instead of passed (E2035): write `[TMVCEndpointFilter(lFilter)]`.
 - **The handler.** For a controller action `OnRequest` and `OnAuthorization` get the controller and the
   action, as with the middleware. On a Minimal API route `OnRequest` is not asked (authentication is always
   required) and `OnAuthorization` gets `''` and `'VERB pattern'`.
-- **The login filters answer any verb.** CORS, a rate limit or a CSRF check that must cover the login is an
-  HTTP filter registered **before** it (`CORS`, `RateLimit`, `CSRFFilter`).
+- **The login of a bundle answers any verb.** CORS, a rate limit or a CSRF check that must cover the login is an
+  HTTP filter registered **before** the bundle (`CORSHTTPFilter`, `RateLimitHTTPFilter`, `CSRFHTTPFilter`).
 - **Endpoint filters run after `OnBeforeControllerAction` of every classic middleware**: a classic hook
   that reads `Context.LoggedUser` sees no user yet. Make it an endpoint filter registered after the
-  authentication one.
-- Other pairs: `JWTCookieLoginFilter` + `JWTCookie` (token in a cookie, `TMVCAuthCookieOptions.Default`);
-  `JWTBlackListFilter`; `CustomAuthLoginFilter` + `CustomAuth` (after a session HTTP filter such as
-  `MemorySessionFilter`); `OIDCLoginFilter` + `OIDC` (`MVCFramework.Filters.OIDC`, `TMVCOIDCOptions.Default`);
-  `RefreshTokenHTTPFilter` (`MVCFramework.JWT.RefreshToken.Filters`, `samples/jsonwebtoken_refreshtoken`).
+  authentication bundle.
+
+The authentication bundles (`MVCFramework.Filters.Authentication` unless noted):
+
+- `JWTAuthenticationBundle(handler, claimsSetup, secret, loginURL = '/login')`, or `TMVCJWTAuthenticationOptions`
+  (start from `.Default`; `Signer` in place of `Secret` for RS256 & co.). Token in `Authorization: Bearer`;
+  `AccessTokenParamName` also reads it from a request parameter when the header is missing (SSE, download links).
+  **Blacklist:** `OnAcceptToken` + `OnNewJWTToBlackList` (both or neither; a request to `BlackListURL`, default
+  `/logout`, with a token blacklists it; the token is read as the check reads it, header or `AccessTokenParamName`).
+  **Refresh token:** set `RefreshTokenStore` (`TMVCInMemoryRefreshTokenStore`,
+  or your `IMVCRefreshTokenStore`) and `RefreshToken` (`TMVCRefreshTokenConfig`: `Issuer`, `RefreshURLSegment` — default
+  `/auth/refresh` — and the TTLs; the bundle signs with its own secret or signer). The store is **one per process**:
+  a global created in `initialization` (`SharedU.pas` of `samples/jsonwebtoken_refreshtoken`), never inside
+  `ConfigureEngine` or `WebModuleCreate` — WebBroker, ISAPI and Apache build an engine per web module, and each
+  would refuse the refresh tokens of the others. The login then answers
+  `{"access_token", "refresh_token", "token_type": "bearer", "expires_in"}`, and `ClaimsSetup` must be nil (it
+  raises otherwise): the access tokens carry `username`, `roles`, the issuer, `iat`/`nbf`/`exp` and a `jti`, no
+  session data. With the blacklist too, a logout whose JSON body carries `{"refresh_token": ...}` also revokes that
+  refresh token and its family.
+- `JWTCookieAuthenticationBundle(handler, claimsSetup, secret, cookie, '/login', '/logout')`, or
+  `TMVCJWTCookieAuthenticationOptions` (`LoginURL` required, `Cookie` from `TMVCAuthCookieOptions.Default`, `LogoutURL`,
+  `LoginAllowedOrigins`: a login whose `Origin` is not listed gets 403; empty = not checked). Token in an HTTP-only
+  cookie. No blacklist. A wizard-generated cookie project reads the origins from `LOGIN_ALLOWED_ORIGINS` in `.env`
+  and raises at startup when it is empty.
+- `BasicAuthenticationBundle(handler, realm)` — the check only. `BasicAuthEndpointFilter` (`MVCFramework.Filters`)
+  is the same filter alone, also with a `TMVCBasicAuthValidator`.
+- `CustomAuthenticationBundle(handler, loginURL = '/system/users/logged')` — on a session: register it after a
+  session HTTP filter such as `MemorySessionHTTPFilter`.
+- `OIDCAuthenticationBundle(TMVCOIDCOptions)` — in `MVCFramework.Filters.OIDC`, start from `TMVCOIDCOptions.Default`.
+- `RefreshTokenHTTPFilter(config, store)` (`MVCFramework.JWT.RefreshToken.Filters`) — the refresh endpoint alone,
+  for a login you write yourself; the bundle with `LoginURL := ''` (below) gives the same plus the check.
+- On top of any of them: `AuthorizeEndpointFilter()`, `RequireRoleEndpointFilter('admin')` (`MVCFramework.Filters`).
+
+**A login of your own** (an action that issues the tokens itself): `LoginURL := ''` leaves the JWT bundle without
+a login part — it holds the check, plus the blacklist and the refresh URL when they are set, and `ClaimsSetup`
+stays nil. Sign the tokens with the same `Secret` or `Signer`; with a store, issue the pair with a
+`TMVCRefreshTokenCore` built on the same `RefreshToken` config (secret included) and the same store
+(`NewTokenPair`). The login must be **outside the check**: for a controller action, set `AAuthenticationRequired :=
+False` for it in the handler's `OnRequest`; a Minimal API route under an engine-wide bundle always requires a token
+(`OnRequest` is not asked there), so put the bundle on a group and the login route outside it.
+
+```delphi
+lJWT := TMVCJWTAuthenticationOptions.Default;
+lJWT.Handler := TMyAuthHandler.Create;            // its OnRequest makes the login action public
+lJWT.Secret := dotEnv.Env('JWT_SECRET');
+lJWT.LoginURL := '';                              // no login part; ClaimsSetup stays nil
+lJWT.RefreshTokenStore := gRefreshStore;          // the process-wide store
+AEngine.Use(JWTAuthenticationBundle(lJWT));       // the check + POST /auth/refresh
+```
 
 **An existing project with `AddMiddleware(...)`** (any project from a 3.4 wizard): the middleware still
-compiles — with a `W1000` warning that names its filter — and works. Leave it alone unless the user asks to
-migrate; write the filter in new code. When migrating, pass the parameters you rely on: `CORS` has
+compiles — with a `W1000` warning that names its replacement — and works. Leave it alone unless the user asks to
+migrate; write the filter in new code. When migrating, pass the parameters you rely on: `CORSHTTPFilter` has
 credentials off and the headers `Content-Type,Authorization`, unlike `TMVCCORSMiddleware`.
 
-| Classic middleware | Filter |
+| Classic middleware | Filter or bundle |
 |--------------------|--------|
-| `TMVCCORSMiddleware`, `TMVCCompressionMiddleware`, `TMVCETagMiddleware`, `TMVCStaticFilesMiddleware`, `TMVCRedirectMiddleware` | `CORS`, `Compression`, `ETag`, `StaticFiles`, `Redirect` (HTTP) |
-| `TMVCActiveRecordMiddleware` · `TMVCRateLimitMiddleware` | `ActiveRecordFilter` (`MVCFramework.Filters.ActiveRecord`) · `RateLimit(TMVCRateLimitOptions)` |
-| `UseMemorySessionMiddleware`, `UseFileSessionMiddleware`, `UseDatabaseSessionMiddleware` | `MemorySessionFilter`, `FileSessionFilter`, `DatabaseSessionFilter` (the last in `.Filters.ActiveRecord`) |
-| `TMVCJWTAuthenticationMiddleware`, `UseJWTMiddleware` | `JWTLoginFilter` (HTTP) + `JWT` (endpoint) |
-| `TMVCJWTCookieAuthenticationMiddleware`, `UseJWTCookieAuthentication` | `JWTCookieLoginFilter` + `JWTCookie` |
-| `TMVCBasicAuthenticationMiddleware` · `TMVCCustomAuthenticationMiddleware`, `TMVCRoleBasedAuthMiddleware` | `BasicAuth(handler)` · `CustomAuthLoginFilter` + `CustomAuth` |
-| `TMVCOIDCAuthenticationMiddleware` · `TMVCCSRFMiddleware` · `TMVCJWTBlackListMiddleware` | `OIDCLoginFilter` + `OIDC` · `CSRFFilter` (or `CSRF`) · `JWTBlackListFilter` |
+| `TMVCCORSMiddleware`, `TMVCCompressionMiddleware`, `TMVCETagMiddleware`, `TMVCStaticFilesMiddleware`, `TMVCRedirectMiddleware` | `CORSHTTPFilter`, `CompressionHTTPFilter`, `ETagHTTPFilter`, `StaticFilesHTTPFilter` (or `FileServerBundle`, which adds Range), `RedirectHTTPFilter` |
+| `TMVCActiveRecordMiddleware` · `TMVCRateLimitMiddleware` | `ActiveRecordHTTPFilter` (`MVCFramework.Filters.ActiveRecord`) · `RateLimitHTTPFilter(TMVCRateLimitOptions)` |
+| `UseMemorySessionMiddleware`, `UseFileSessionMiddleware`, `UseDatabaseSessionMiddleware` | `MemorySessionHTTPFilter`, `FileSessionHTTPFilter`, `DatabaseSessionHTTPFilter` (the last in `.Filters.ActiveRecord`) |
+| `TMVCJWTAuthenticationMiddleware`, `UseJWTMiddleware` | `JWTAuthenticationBundle` |
+| `TMVCJWTCookieAuthenticationMiddleware`, `UseJWTCookieAuthentication` | `JWTCookieAuthenticationBundle` |
+| `TMVCBasicAuthenticationMiddleware` · `TMVCCustomAuthenticationMiddleware`, `TMVCRoleBasedAuthMiddleware` | `BasicAuthenticationBundle(handler)` · `CustomAuthenticationBundle(handler, loginURL)` |
+| `TMVCOIDCAuthenticationMiddleware` · `TMVCCSRFMiddleware` | `OIDCAuthenticationBundle` · `CSRFHTTPFilter` (or `CSRFEndpointFilter`) |
+| `TMVCJWTBlackListMiddleware` · `TMVCJWTRefreshTokenMiddleware` | `OnAcceptToken` + `OnNewJWTToBlackList` of `TMVCJWTAuthenticationOptions` · its `RefreshTokenStore` (or `RefreshTokenHTTPFilter`) |
 
-Every other one (`Trace`, `Analytics`, `SecurityHeaders`, `Swagger`, `OpenAPI`, …): the warning names it.
+Every other one (`TraceHTTPFilter`, `AnalyticsHTTPFilter`, `SecurityHeadersHTTPFilter`, `SwaggerHTTPFilter`, `OpenAPIHTTPFilter`, …): the warning names it.
 
 ---
 
@@ -733,8 +797,8 @@ end;
 
 // [MVCRequiresRole] is NOT part of MVCFramework. It comes from
 // MVCFramework.Middleware.Authentication.RoleBasedAuthHandler and is only enforced
-// by a TRoleBasedAuthHandler descendant given to the authentication filter
-// (CustomAuth, JWT). Without it the attribute compiles and does nothing.
+// by a TRoleBasedAuthHandler descendant given to the authentication bundle
+// (CustomAuthenticationBundle, JWTAuthenticationBundle, ...). Without it the attribute compiles and does nothing.
 [MVCRequiresRole('admin')]
 ```
 
@@ -805,9 +869,11 @@ In `EngineConfigU.pas`: add `uses Controllers.Products;` and
 - **No SQL generator / no FireDAC driver** — both register themselves in `initialization`; leave either out and it still compiles. Missing generator → `ERQLCompilerNotFound` on the first query. Add both with the first entity (`reference/activerecord.md`)
 - **`[MVCOwned]`** — deserialization hint only; the entity still creates and frees the list (`reference/activerecord.md`, Master-Detail)
 - **Nullable fields** — `NullableInt64`, `NullableString`, etc. from `MVCFramework.Nullables`; always check `.HasValue` before `.Value`
-- **Transactions** — `ActiveRecordFilter` (and the old `TMVCActiveRecordMiddleware`) opens a connection per request but does NOT auto-commit; wrap multi-step mutations in `StartTransaction/Commit/Rollback`
-- **CORS order** — the `CORS` HTTP filter goes BEFORE the login filters so the `OPTIONS` preflight is answered without auth. `EndpointCORS` (endpoint filter) runs only on a matched route and does not answer a preflight
-- **Old `JWT(...)` signature** — `JWT(handler, claimsSetup, secret, loginURL, ...)` was rc8 and is gone: the login is `JWTLoginFilter`, the check `JWT(handler, secret, claimsToCheck, ...)`
+- **Transactions** — `ActiveRecordHTTPFilter` (and the old `TMVCActiveRecordMiddleware`) opens a connection per request but does NOT auto-commit; wrap multi-step mutations in `StartTransaction/Commit/Rollback`
+- **CORS order** — `CORSHTTPFilter` goes BEFORE the authentication bundle so the `OPTIONS` preflight is answered without auth. `CORSEndpointFilter` (endpoint filter) runs only on a matched route and does not answer a preflight
+- **rc8 names** — `UseHTTPFilter(...)` and `JWT(handler, claimsSetup, secret, loginURL, ...)` were rc8 and are gone: write `AEngine.Use(...)` and `AEngine.Use(JWTAuthenticationBundle(handler, claimsSetup, secret, loginURL))` — login and check in one call
+- **`Use(ETagHTTPFilter)` without `()`** — E2250: a filter function without arguments needs its brackets inside `Use(...)`
+- **The same bundle twice** — on the engine twice, or on the engine and on a Minimal API group: `EMVCConfigException` at startup. Put it in one place
 - **Route conflicts** — two actions on the same path must differ only in `[MVCHTTPMethod]`
 - **SSE** — never hand-roll the stream; inherit `TMVCSSEController` and override its hooks (`reference/sse.md`)
 - **Validation trigger** — any class with ≥1 validator attribute is auto-validated on `[MVCFromBody]`; `TMVCValidatable` is needed only for `OnValidate`. Suppress with `[MVCFromBody(bvDoNotValidate)]`
@@ -824,7 +890,7 @@ In `EngineConfigU.pas`: add `uses Controllers.Products;` and
 
 | Unit | Purpose |
 |------|---------|
-| `MVCFramework` | Core: `TMVCController`, `TMVCEngine`, attributes, `IMVCResponse` |
+| `MVCFramework` | Core: `TMVCController`, `TMVCEngine` (and its `Use`), attributes, `IMVCResponse`, `IMVCFilterBundle`, `TMVCFilterBundle` |
 | `MVCFramework.Commons` | `TMVCMediaType`, `TMVCHTTPMethodType`, `HTTP_STATUS` |
 | `MVCFramework.ActiveRecord` | `TMVCActiveRecord` and its class-level CRUD; also `ActiveRecordConnectionsRegistry`, `TMVCActiveRecordBackEnd`, `loIgnoreNotExistentFields`, `TMVCActiveRecordList` |
 | `MVCFramework.Nullables` | `NullableInt32/64/String/Boolean/TDate/TDateTime/Currency` |
@@ -832,9 +898,11 @@ In `EngineConfigU.pas`: add `uses Controllers.Products;` and
 | `MVCFramework.Validation` | `TMVCValidatable`, `EMVCValidationException`, `EMVCStorageValidationException` |
 | `MVCFramework.Validators` | All validator attributes (`MVCRequired`, `MVCEmail`, `MVCRange`, …) |
 | `MVCFramework.ValidationEngine` | `TMVCValidationEngine` for manual validation |
-| `MVCFramework.Filters` | Every ready-made filter: `CORS`, `Compression`, `StaticFiles`, `JWTLoginFilter`, `JWT`, `BasicAuth`, the session filters, … |
-| `MVCFramework.Filters.ActiveRecord` | `ActiveRecordFilter`, `DatabaseSessionFilter` |
-| `MVCFramework.Filters.OIDC` · `.Filters.Swagger` · `.Filters.OpenAPI` · `.Filters.Redis` | `OIDC`, `OIDCLoginFilter` · `Swagger` · `OpenAPI` · `RateLimitRedis` |
+| `MVCFramework.Filters` | Every ready-made filter: `CORSHTTPFilter`, `CompressionHTTPFilter`, `StaticFilesHTTPFilter`, `FileServerBundle`, `BasicAuthEndpointFilter`, `AuthorizeEndpointFilter`, `RequireRoleEndpointFilter`, the session filters, `TMVCAuthCookieOptions`, … |
+| `MVCFramework.Filters.Authentication` | `JWTAuthenticationBundle`, `JWTCookieAuthenticationBundle`, `BasicAuthenticationBundle`, `CustomAuthenticationBundle`, `TMVCJWTAuthenticationOptions`, `TMVCJWTCookieAuthenticationOptions` |
+| `MVCFramework.Filters.ActiveRecord` | `ActiveRecordHTTPFilter`, `DatabaseSessionHTTPFilter` |
+| `MVCFramework.Filters.OIDC` · `.Filters.Swagger` · `.Filters.OpenAPI` · `.Filters.Redis` | `OIDCAuthenticationBundle`, `TMVCOIDCOptions` · `SwaggerHTTPFilter` · `OpenAPIHTTPFilter` · `RateLimitRedisHTTPFilter` |
+| `MVCFramework.JWT.RefreshToken` · `.JWT.RefreshToken.Filters` | `TMVCRefreshTokenConfig`, `IMVCRefreshTokenStore`, `TMVCInMemoryRefreshTokenStore` · `RefreshTokenHTTPFilter` |
 | `MVCFramework.JWT` | `TJWT`, `TJWTClaimsSetup`, `TJWTCheckableClaim` |
 | `MVCFramework.Middleware.*` | The classic middleware — deprecated in 3.5, each warning names its filter |
 | `MVCFramework.DataSet.Utils` | Dataset → JSON helpers |
@@ -853,7 +921,7 @@ All samples are in the official repository at https://github.com/danieleteti/del
 | `samples/master_details/` | Full CRUD with master-detail relations |
 | `samples/routing/` | All routing patterns and parameter types |
 | `samples/jsonwebtokenplain/` | JWT authentication |
-| `samples/jsonwebtoken_refreshtoken/` | JWT with the filters (`JWT` endpoint filter) plus refresh tokens (`RefreshTokenHTTPFilter`) |
+| `samples/jsonwebtoken_refreshtoken/` | JWT plus refresh tokens: access + refresh token pair, rotation |
 | `samples/activerecord_restful_crud/` | ActiveRecord + auto-CRUD with `[MVCEntityActions]` |
 | `samples/validation_showcase/` | All validator attributes, cross-field, `OnValidate` |
 | `samples/validation_vs_storage_demo/` | DTO vs ActiveRecord two-layer validation pattern |

@@ -71,15 +71,15 @@ end;
 
 | Style | Read the principal from |
 |-------|------------------------|
-| JWT (controller) | `Context.LoggedUser.UserName` / `.Roles` / `.CustomData` — populated by the `JWT` / `JWTCookie` endpoint filter (or the deprecated `TMVCJWTAuthenticationMiddleware` of a 3.4 project) after signature validation |
-| Minimal API | the `Authorize` / `RequireRole('admin')` endpoint filters, plus `Ctx.LoggedUser` |
+| JWT (controller) | `Context.LoggedUser.UserName` / `.Roles` / `.CustomData` — populated by the check of `JWTAuthenticationBundle` / `JWTCookieAuthenticationBundle` (or the deprecated `TMVCJWTAuthenticationMiddleware` of a 3.4 project) after signature validation |
+| Minimal API | the `AuthorizeEndpointFilter` / `RequireRoleEndpointFilter('admin')` endpoint filters, plus `Ctx.LoggedUser` |
 | Web app session | `Context.Session['user']` — only after the session filter/middleware has run |
 
 Role checks belong on the route group or the action, not scattered through the body:
 
 ```delphi
 // minimal API — the whole group is gated
-var lAdmin := lApi.Prefix('/admin').Use(Authorize()).Use(RequireRole('admin'));
+var lAdmin := lApi.Prefix('/admin').Use(AuthorizeEndpointFilter()).Use(RequireRoleEndpointFilter('admin'));
 ```
 
 ---
@@ -214,12 +214,12 @@ Add a Content-Security-Policy (see §8): it is the backstop for the XSS you miss
 **Cookie-based auth is vulnerable; `Authorization: Bearer` is not** (the browser does not attach a header
 automatically).
 
-The cookie of the JWT cookie filters (`JWTCookieLoginFilter` + `JWTCookie`) is already correct by default —
+The cookie of `JWTCookieAuthenticationBundle` is already correct by default —
 `TMVCAuthCookieOptions.Default` is `Secure=True`, `SameSite=Strict`, and the cookie is always `HttpOnly`:
 
 ```delphi
-lCookie := TMVCAuthCookieOptions.Default;
-lCookie.Secure := dotEnv.Env('JWT_COOKIE_SECURE', True);   // HTTPS only — keep True in production
+lOptions := TMVCJWTCookieAuthenticationOptions.Default;    // Cookie = TMVCAuthCookieOptions.Default
+lOptions.Cookie.Secure := dotEnv.Env('JWT_COOKIE_SECURE', True);   // HTTPS only — keep True in production
 ```
 
 (A 3.4 project has `UseJWTCookieAuthentication(...).SetCookieSecure(True)`: deprecated in 3.5, same defaults.)
@@ -232,9 +232,11 @@ synchronizer token below.
 
 **`SameSite` does not stop login CSRF.** A cross-site page that auto-submits a form to `/login` with the
 attacker's credentials is a top-level navigation: the browser stores the attacker's cookie and the victim
-works inside the attacker's account. Refuse a cross-site login before it reaches the login filter: an
-`AllowedOriginFilter(['https://app.example.com'], '/login')` HTTP filter registered **before**
-`JWTCookieLoginFilter` answers 403 to a request whose `Origin` is not in the list.
+works inside the attacker's account. Refuse a cross-site login before it reaches the login:
+`lOptions.LoginAllowedOrigins := ['https://app.example.com']` makes the bundle answer 403 to a login whose `Origin`
+is not in the list (a request without `Origin` is not a cross-site browser request and passes; the default, empty,
+checks nothing — a wizard project reads `LOGIN_ALLOWED_ORIGINS` from `.env` and refuses to start when it is empty). With a login of your own, an `AllowedOriginHTTPFilter(['https://app.example.com'], '/login')`
+HTTP filter registered **before** it does the same.
 
 **Do not weaken `SameSite` to `None`** without a hard requirement; `Strict` is what makes the cookie flow
 CSRF-safe for authenticated requests. If you ever must relax it (or you are on Delphi 10.x), add the
@@ -244,7 +246,7 @@ callback reads from the request.
 ```delphi
 // before routing, registered first: POST, PUT, PATCH, DELETE and QUERY need X-CSRF-Token or the
 // csrf_token form field, otherwise 403. The login has no session yet: exempt it (Origin guarded above)
-AEngine.UseHTTPFilter(CSRFFilter(dotEnv.Env('CSRF_SECRET'),          // at least 16 characters, or it raises
+AEngine.Use(CSRFHTTPFilter(dotEnv.Env('CSRF_SECRET'),          // at least 16 characters, or it raises
   function(AContext: TWebContext): string
   begin
     Result := AContext.Request.Cookie('jwt_token');                 // the session id of the request
@@ -252,8 +254,8 @@ AEngine.UseHTTPFilter(CSRFFilter(dotEnv.Env('CSRF_SECRET'),          // at least
 ```
 
 Put `CSRFToken(Secret, SessionId)` in the page (a hidden field, or `hx-headers`). The session id must not
-change while the page is open: the raw JWT cookie does when `JWTCookie` renews it (a token with a live
-validity window) — then use a claim that stays, e.g. `jti`. `CSRF(...)` is the same check as an endpoint
+change while the page is open: the raw JWT cookie does when `JWTCookieAuthenticationBundle` renews it (a token with a live
+validity window) — then use a claim that stays, e.g. `jti`. `CSRFEndpointFilter(...)` is the same check as an endpoint
 filter (routed requests only). A 3.4 project may have `TMVCCSRFMiddleware`: deprecated, same check.
 
 And: **GET must never change state.** A GET that deletes something is CSRF-able no matter what you set.
@@ -300,8 +302,8 @@ if not lFull.StartsWith(TPath.GetFullPath(lRoot) + PathDelim, True) then
 - Store uploads **outside** the static-files root, or the upload becomes a way to serve executable content.
 - `ContentStream` is request-owned — read it, do not free it.
 
-The `StaticFiles` HTTP filter (and the deprecated `TMVCStaticFilesMiddleware`) does check for directory
-traversal on the paths it serves — a path out of the root answers 404 — but it protects *its* document root,
+`FileServerBundle` and `StaticFilesHTTPFilter` (and the deprecated `TMVCStaticFilesMiddleware`) do check for directory
+traversal on the paths they serve — a path out of the root answers 404 — but they protect *their* document root,
 not any path you construct yourself.
 
 ---
@@ -349,7 +351,7 @@ Result := RedirectResponse(lNext);
 
 ## 8. Security headers
 
-`SecurityHeaders` (HTTP filter, `MVCFramework.Filters`) and the deprecated `TMVCSecurityHeadersMiddleware` set **only two**
+`SecurityHeadersHTTPFilter` (HTTP filter, `MVCFramework.Filters`) and the deprecated `TMVCSecurityHeadersMiddleware` set **only two**
 headers: `X-Content-Type-Options: nosniff` and `X-XSS-Protection: 0` — the value OWASP recommends: the old
 browser XSS filter could itself be abused, and CSP is the real control.
 
@@ -357,7 +359,7 @@ browser XSS filter could itself be abused, and CSP is the real control.
 actually stops XSS:
 
 ```delphi
-lEngine.UseHTTPFilter(
+lEngine.Use(
   procedure(const AContext: TWebContext; const ANext: TMVCHTTPFilterNext)
   begin
     AContext.Response.SetCustomHeader('Content-Security-Policy',
@@ -373,13 +375,13 @@ lEngine.UseHTTPFilter(
 Note the wizard's `baselayout.html` loads Bootstrap and htmx from a CDN — a strict `script-src 'self'` will
 block them. Either self-host those assets or add the CDN origin to the policy deliberately.
 
-**CORS:** with origin `*` (the default of the `CORS` HTTP filter) credentials are never sent. The filter has
+**CORS:** with origin `*` (the default of `CORSHTTPFilter`) credentials are never sent. The filter has
 credentials **off** by default (`AAllowsCredentials = False`); turn them on only for a cookie-authenticated
 frontend, and list only origins you control:
 
 ```delphi
 // comma-separated list of exact origins; the request's Origin is matched against it
-AEngine.UseHTTPFilter(CORS('https://app.example.com,https://admin.example.com'));
+AEngine.Use(CORSHTTPFilter('https://app.example.com,https://admin.example.com'));
 ```
 
 A 3.4 project may use `TMVCCORSMiddleware` (deprecated): there, naming an origin turns credentials **on** by
@@ -396,20 +398,26 @@ Never build that list from the request's own `Origin` header — that turns it b
   several algorithms.
 - The secret is a **secret**: ≥256 bits of randomness, from the environment, never in the repo, and rotatable.
   A JWT signed with `'change-me'` is a signature by anyone who reads your GitHub.
-- **Pass the claims to check.** The `JWT` and `JWTCookie` filters check the expiration by default
-  (`[TJWTCheckableClaim.ExpirationTime]`; `[]` checks none: the token never expires). The classic middleware
-  of a 3.4 project — every JWT middleware constructor and `UseJWTCookieAuthentication` — default to `[]`:
-  there an expired token is accepted forever. Pass the full set, as the wizard does:
+- **Pass the claims to check.** `JWTAuthenticationBundle` and `JWTCookieAuthenticationBundle` check the expiration by
+  default (`ClaimsToCheck` of their options records is `[TJWTCheckableClaim.ExpirationTime]`; `[]` checks none: the
+  token never expires). The classic middleware of a 3.4 project — every JWT middleware constructor and
+  `UseJWTCookieAuthentication` — default to `[]`: there an expired token is accepted forever. When the claims setup
+  sets `NotBefore` and `IssuedAt`, check them too:
 
   ```delphi
-  [TJWTCheckableClaim.ExpirationTime, TJWTCheckableClaim.NotBefore, TJWTCheckableClaim.IssuedAt]
+  lOptions.ClaimsToCheck := [TJWTCheckableClaim.ExpirationTime, TJWTCheckableClaim.NotBefore, TJWTCheckableClaim.IssuedAt];
   ```
 - Keep expiry short. A JWT cannot be revoked — that is the trade you accepted. If you need revocation, keep a
-  server-side session or a token deny-list (`JWTBlackListFilter`), or short access tokens plus revocable
-  refresh tokens (`RefreshTokenHTTPFilter`, `MVCFramework.JWT.RefreshToken.Filters`).
+  server-side session or a token deny-list (`OnAcceptToken` + `OnNewJWTToBlackList` of
+  `TMVCJWTAuthenticationOptions`), or short access tokens plus revocable refresh tokens (`RefreshTokenStore` of the
+  same options — one global store for the process; with both, a logout whose JSON body carries `refresh_token`
+  revokes it too). With a login of your own, `LoginURL := ''` leaves the bundle with the check only (or use
+  `RefreshTokenHTTPFilter` of `MVCFramework.JWT.RefreshToken.Filters`), and the login must be **outside the check**:
+  a controller action made public by the handler's `OnRequest`, or a Minimal API route outside the group that
+  carries the bundle — an engine-wide check covers every Minimal API route (see `dmvcframework`, *Filters*).
 - Do not put secrets or PII in the payload: it is **base64, not encryption**. Anyone can read it.
-- Validate the signature **before** trusting any claim, including the user id and the roles. The `JWT`
-  filter does this; your code must not read claims from an unvalidated token.
+- Validate the signature **before** trusting any claim, including the user id and the roles. The JWT bundles
+  do this; your code must not read claims from an unvalidated token.
 
 ---
 
@@ -420,7 +428,7 @@ Never build that list from the request's own `Origin` header — that turns it b
   (`.gitignore`) and ship a `.env.sample` with empty values. See `dmvcframework`, `reference/dotenv.md`.
 - Fail loudly on a missing secret in production (`dotEnv.RequireKeys([...])`) instead of falling back to a
   default like `'change-me'` — a default secret is worse than a crash.
-- Do not log credentials, tokens, or full request bodies of auth endpoints. The `Trace` HTTP filter (and the
+- Do not log credentials, tokens, or full request bodies of auth endpoints. `TraceHTTPFilter` (and the
   deprecated `TMVCTraceMiddleware`) logs request bodies: do not enable it in production on routes that carry
   passwords.
 - Serve over HTTPS (`IMVCServer` has the certificate properties — see `dmvcframework`,
@@ -435,8 +443,8 @@ Never build that list from the request's own `Origin` header — that turns it b
   page for browsers and leaves the JSON error body for APIs.
 - **JSON-RPC:** install an exception handler on `PublishObject` — see `dmvcframework-jsonrpc`.
 - **Rate-limit** what can be brute-forced (login, password reset, token endpoints):
-  `lEngine.UseHTTPFilter(RateLimit(60, 60))`, or `RateLimitRedis` when you run more than one instance.
-  Register it **before** the login filter: a login filter answers before every filter registered after it.
+  `lEngine.Use(RateLimitHTTPFilter(60, 60))`, or `RateLimitRedisHTTPFilter` when you run more than one instance.
+  Register it **before** the authentication bundle: its login answers before every filter registered after it.
 - **Hash passwords** with bcrypt/scrypt/Argon2 and a per-user salt. Never MD5/SHA-1, never plain, never a
   reversible cipher. Compare in constant time.
 - **Timing-safe comparison** for tokens and API keys — a `=` on strings leaks length and prefix.
