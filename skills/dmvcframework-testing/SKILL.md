@@ -54,7 +54,7 @@ The user is expected to have a wizard-generated project and to have started the 
 folder** (look for `*.dpr` + `EngineConfigU.pas` + `Controllers.*.pas` or `RoutesU.pas`).
 
 - **Read the controllers/routes under test first** — the test project reuses the very same controller and
-  middleware units, so the tests exercise the real thing, not a copy.
+  engine-configuration units (filters included), so the tests exercise the real thing, not a copy.
 - **If there is no project to test**, stop and tell the user to create one with the IDE wizard
   (**File → New → Other → Delphi Projects → DelphiMVCFramework**), accepting the defaults — the server
   backend is **Indy Direct** — then `cd` into the folder and start you there.
@@ -83,11 +83,11 @@ MyProjectTests/
 Build the engine directly and host it with the Indy Direct backend. There is no WebModule and no `.dfm`.
 
 **This holds even when the application ships as an ISAPI DLL or an Apache module.** The host is not what you
-are testing — the engine, the controllers and the middleware are. Call the app's own
+are testing — the engine, the controllers and the filters are. Call the app's own
 `ConfigureEngine(AEngine)` from the test, host it in-process with Indy Direct, and you exercise exactly the
 same stack that WebBroker would serve in production. Do not try to spin up ISAPI/Apache from a test.
-Do **not** re-register controllers and middleware by hand in the test: a hand-picked subset is a different
-application (leave out the JWT middleware and every authentication test in §6 fails).
+Do **not** re-register controllers and filters by hand in the test: a hand-picked subset is a different
+application (leave out the JWT filters and every authentication test in §6 fails).
 
 `ConfigureEngine` reads `dotEnv` (`JWT_SECRET` has no fallback, by design), so the test executable needs a
 `.env` in its own folder with its **own throwaway `JWT_SECRET`** — never a copy of the app's secret — kept out
@@ -124,7 +124,7 @@ begin
     begin
       Config[TMVCConfigKey.DefaultContentType] := TMVCMediaType.APPLICATION_JSON;
     end);
-  ConfigureEngine(AEngine);      // the same controllers and middleware the app serves
+  ConfigureEngine(AEngine);      // the same controllers and filters the app serves
 
   Result := TMVCServerFactory.CreateIndyDirect(AEngine);
   Result.Listen(APort, '127.0.0.1');  // loopback: the default 0.0.0.0 triggers the Windows firewall prompt
@@ -356,7 +356,7 @@ var
   lResp: IMVCRESTResponse;
   lJSON: TJDOJsonObject;
 begin
-  // the JWT middleware serves the login URL you configured (e.g. '/login');
+  // JWTLoginFilter (the JWT middleware, in a 3.4 project) serves the login URL you configured (e.g. '/login');
   // a separate client, so the Basic header does not stay on FClient
   lResp := TMVCRESTClient.New.BaseURL(TEST_HOST, TEST_PORT)
     .SetBasicAuthorization(AUser, APassword)
@@ -421,9 +421,10 @@ DELETE is still a breach.
 ## 8. Database-backed tests
 
 For tests that need a real database, configure FireDAC in `[SetupFixture]`
-**before** starting the server. The wizard's `ConfigureEngine` already registers `TMVCActiveRecordMiddleware`
-with the connection named by `firedac.connection_definition_name` in `.env`: set it to `TestConn` in the test
-`.env` — without the middleware no connection is bound to the request and every ActiveRecord call fails.
+**before** starting the server. The wizard's `ConfigureEngine` already registers `ActiveRecordFilter`
+(`TMVCActiveRecordMiddleware` in a 3.4 project) with the connection named by
+`firedac.connection_definition_name` in `.env`: set it to `TestConn` in the test `.env` — without it no
+connection is bound to the request and every ActiveRecord call fails.
 
 ```delphi
 [TestFixture]
@@ -465,7 +466,7 @@ begin
     LParams.Free;
   end;
 
-  // 2. Start the in-process server (the engine's ActiveRecord middleware uses 'TestConn')
+  // 2. Start the in-process server (the engine's ActiveRecord filter uses 'TestConn')
   FServer := StartTestServer(9998, FEngine);
 end;
 
@@ -704,7 +705,7 @@ List the endpoints from the controller: GET list, GET by ID, POST, PUT, PATCH, D
 Include error cases: not found, invalid input, unauthorized, forbidden.
 
 ### Step 2 — Create (or reuse) `Tests.Server.pas`
-Build the engine, register the controller(s) under test and only the middleware actually exercised,
+Build the engine, register the controller(s) under test and only the filters actually exercised,
 host it with `TMVCServerFactory.CreateIndyDirect`.
 
 ### Step 3 — Create `Tests.Base.pas`
