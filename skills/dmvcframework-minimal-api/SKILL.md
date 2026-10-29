@@ -150,7 +150,7 @@ Everything hangs off a **group**. There are no `Map*` methods on `TMVCEngine`.
 function Root: TMVCRouteGroup<TObject>;                      // = Prefix('')
 function Prefix(const APrefix: string): TMVCRouteGroup<TObject>; overload;
 function Prefix<T: class>(const APrefix: string; const AData: T;
-                          AOwns: Boolean = True): TMVCRouteGroup<T>; overload;
+                          const AOwnership: TMVCGroupDataOwnership = gdoEngine): TMVCRouteGroup<T>; overload;
 // TMVCEngine (MVCFramework): one verb, the argument's type picks the overload
 function Use(const AFilter: TMVCHTTPFilter): TMVCEngine; overload;
 function Use(const AFilter: TMVCEndpointFilter): TMVCEngine; overload;   // every route, controllers too
@@ -210,7 +210,7 @@ lRoutes.MapGet('/customers', ...)
   .WithTags(['customers'])
   .WithDeprecated
   .Produces<TCustomer>
-  .WithOpenAPI(False)                // hide from the spec
+  .WithOpenAPI(oavHidden)            // hide from the spec
   .Use(RequireRoleEndpointFilter('admin'));        // route-scoped filter, runs after the group's
 ```
 
@@ -388,8 +388,11 @@ skill, *Filters*) · `MVCFramework.Filters.OIDC` — `OIDCAuthenticationBundle(T
 
 **Companion units** (the core unit pulls in no FireDAC, SwagDoc or Redis): `MVCFramework.Filters.ActiveRecord` —
 `ActiveRecordEndpointFilter(ConnectionDefName)`, `DatabaseSessionEndpointFilter`, `ActiveRecordHTTPFilter`, `DatabaseSessionHTTPFilter` ·
-`MVCFramework.Filters.OpenAPI` — `OpenAPIHTTPFilter(Engine, Info, '/openapi.json')` · `MVCFramework.Filters.Swagger` —
-`SwaggerHTTPFilter(...)` · `MVCFramework.Filters.Redis` — `RateLimitRedisHTTPFilter` ·
+`MVCFramework.Filters.OpenAPI` — `OpenAPIHTTPFilter(Engine, Info, '/openapi.json')` /
+`OpenAPIHTTPFilter(Engine, Info, [Sources], '/openapi.json')` (your `IMVCOpenAPISource`s, after the routes and the
+controllers) · `MVCFramework.Filters.Swagger` — `SwaggerHTTPFilter(Engine, Info, URL, JWTDescription,
+Authentications = [], ...)`: with `JWTAuthenticationBundle` pass `[sauBearer]` (`TMVCSwaggerAuthentications`), because
+the filter finds a JWT on its own only in the deprecated middleware · `MVCFramework.Filters.Redis` — `RateLimitRedisHTTPFilter` ·
 `MVCFramework.JWT.RefreshToken.Filters` — `RefreshTokenHTTPFilter` (the refresh endpoint alone, for a login of your own).
 
 **A login route of your own** (it issues the tokens itself): `TMVCJWTAuthenticationOptions` with `LoginURL := ''`
