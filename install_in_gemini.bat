@@ -63,7 +63,7 @@ if exist "!GEM!" (
 >>"!GEM!" echo - `skills/dmvcframework-security/SKILL.md` — REQUIRED for any endpoint taking client input
 >>"!GEM!" echo - `skills/dmvcframework-jsonrpc/SKILL.md` — JSON-RPC 2.0 services and client
 >>"!GEM!" echo - `skills/dmvcframework-testing/SKILL.md` — DUnitX integration tests
->>"!GEM!" echo - `skills/htmx-skill/SKILL.md` — index of the official htmx.org docs
+>>"!GEM!" echo - `skills/htmx-skill/SKILL.md` — index of the htmx 2.x reference pages
 >>"!GEM!" echo.
 >>"!GEM!" echo Do not write Delphi or DMVCFramework code from memory: the API names in these files are authoritative.
 

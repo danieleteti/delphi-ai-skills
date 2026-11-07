@@ -50,7 +50,7 @@ jobs:
         run: |
           cd target
           git diff --quiet -- skills/htmx-skill/SKILL.md && { echo "nothing to commit"; exit 0; }
-          tag=$(grep -o 'generated from the `v2\.[0-9]*\.[0-9]*`' skills/htmx-skill/SKILL.md | grep -o 'v2\.[0-9.]*')
+          tag=$(grep -o 'htmx 2\.x\*\*, release `v2\.[0-9]*\.[0-9]*`' skills/htmx-skill/SKILL.md | grep -o 'v2\.[0-9.]*')
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "chore(htmx-skill): regenerate for htmx ${tag#v}" -- skills/htmx-skill/SKILL.md

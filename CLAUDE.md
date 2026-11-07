@@ -62,8 +62,10 @@ rather than repeat. A **warning code** (`W1035`) is verified the only honest way
 and compile it with `dcc32.exe`, then copy what it printed.
 
 Adding a skill? Also add it to: the four `install_in_*.bat` (three of them carry a hand-written one-line
-description per skill), and the four places README.md lists the set — the skills table, the prompts section,
-the `AGENTS.md` example, the layout tree.
+description per skill), and the four places the set is listed — the skills table in `README.md`, the prompts in
+`docs/prompts.md`, the `AGENTS.md` example in `docs/installing.md`, the layout tree in `docs/layout.md`. The
+public docs state the current state and the changes between public versions (`docs/changelog.md`), never how the
+work was done; process notes belong here.
 
 **The core skill's `SKILL.md` is deliberately thin.** Bulk goes in `reference/` — it is loaded only when the
 task needs it. When adding substantial material, ask whether it belongs in a reference file rather than in
