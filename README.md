@@ -314,7 +314,7 @@ Before writing Delphi or DelphiMVCFramework code, read the relevant skill:
 - `skills/dmvcframework-security/SKILL.md` — REQUIRED for any endpoint taking client input
 - `skills/dmvcframework-jsonrpc/SKILL.md` — JSON-RPC 2.0 services and client
 - `skills/dmvcframework-testing/SKILL.md` — DUnitX integration tests
-- `skills/htmx-skill/SKILL.md` — index of the official htmx.org docs
+- `skills/htmx-skill/SKILL.md` — index of the htmx 2.x reference pages
 
 Do not write Delphi or DMVCFramework code from memory: the API names in these files are authoritative.
 ```

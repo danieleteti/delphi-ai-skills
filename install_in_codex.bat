@@ -65,7 +65,7 @@ if exist "!AGENTS!" (
 >>"!AGENTS!" echo - `skills/dmvcframework-security/SKILL.md` — REQUIRED for any endpoint taking client input
 >>"!AGENTS!" echo - `skills/dmvcframework-jsonrpc/SKILL.md` — JSON-RPC 2.0 services and client
 >>"!AGENTS!" echo - `skills/dmvcframework-testing/SKILL.md` — DUnitX integration tests
->>"!AGENTS!" echo - `skills/htmx-skill/SKILL.md` — index of the official htmx.org docs
+>>"!AGENTS!" echo - `skills/htmx-skill/SKILL.md` — index of the htmx 2.x reference pages
 >>"!AGENTS!" echo.
 >>"!AGENTS!" echo Do not write Delphi or DMVCFramework code from memory: the API names in these files are authoritative.
 
