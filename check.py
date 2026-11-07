@@ -19,6 +19,7 @@ import os
 import re
 import sys
 import glob
+import time
 
 REPO = os.path.dirname(os.path.abspath(__file__))
 SKILLS = os.path.join(REPO, 'skills')
@@ -209,11 +210,19 @@ def check_htmx_urls():
         r'https://v2\.htmx\.org/[^\s)`]*', read(os.path.join(SKILLS, 'htmx-skill', 'SKILL.md')))})
 
     def status(url):
-        try:
-            return url, urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent': 'check.py'}),
-                                               timeout=30).status
-        except Exception as e:  # HTTPError, URLError, timeout: all mean the link is not usable
-            return url, getattr(e, 'code', type(e).__name__)
+        # A 404 is a dead link: report it at once. A network error or a 5xx is retried, because one
+        # timeout on a CI runner must not read as a dead link.
+        for attempt in range(4):
+            try:
+                return url, urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent': 'check.py'}),
+                                                   timeout=60).status
+            except Exception as e:  # HTTPError, URLError, timeout
+                code = getattr(e, 'code', None)
+                if code is not None and code < 500:
+                    return url, code
+                last = code or '%s %s' % (type(e).__name__, getattr(e, 'reason', e))
+                time.sleep(3 * (attempt + 1))
+        return url, last
     with ThreadPoolExecutor(8) as pool:
         for url, code in pool.map(status, urls):
             if code != 200:
