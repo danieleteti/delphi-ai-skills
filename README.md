@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/skills-0.3.0-fbbf24" alt="skills version 0.3.0">
+  <img src="https://img.shields.io/badge/skills-0.4.0-fbbf24" alt="skills version 0.4.0">
   <img src="https://img.shields.io/badge/Delphi-11%20Alexandria%2B-1a1a1a" alt="Delphi 11 Alexandria and later">
   <img src="https://img.shields.io/badge/DelphiMVCFramework-3.5.x-1a1a1a" alt="targets DelphiMVCFramework 3.5.x">
   <img src="https://img.shields.io/badge/license-Apache--2.0-1a1a1a" alt="Apache 2.0">
@@ -110,7 +110,7 @@ The right answer is **no: the framework frees the returned object, and `ToFree` 
 
 | | |
 |---|---|
-| **Skills version** | **0.3.0** (pre-1.0: the shape of the set may still change) |
+| **Skills version** | **0.4.0** (pre-1.0: the shape of the set may still change) |
 | **Targets DelphiMVCFramework** | **3.5.x** (`silicon`), branch `dmvc-3.5` |
 | **Verified against** | Delphi 13 Florence (and 12 Athens where a skill says so; targeting 11 Alexandria and later), DelphiMVCFramework 3.5.0, ExeWatch Delphi SDK 0.25.0 |
 

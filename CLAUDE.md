@@ -172,7 +172,7 @@ Test an installer against a scratch directory before shipping it — cmd.exe esc
 
 ## Versioning
 
-Currently **0.3.0**, pre-1.0: the shape of the skill set is explicitly unsettled, and skills may be split,
+Currently **0.4.0**, pre-1.0: the shape of the skill set is explicitly unsettled, and skills may be split,
 merged or renamed between minor versions. The skills version is independent of the framework's; the README
 states which DelphiMVCFramework release the content was verified against. Update both when content changes
 materially.

@@ -1,6 +1,6 @@
 # Changelog
 
-**Unreleased** — five skills added, fifteen in total.
+**0.4.0** — five skills added, fifteen in total.
 
 - **`delphi-firedac`** — FireDAC in plain Delphi: the `uses` set for a non-visual program, connection definitions
   and pooling, transactions (a connection closed with an open transaction *commits*), parameters and macros
