@@ -1,6 +1,6 @@
 ---
 name: delphi
-description: Use when writing, reviewing or fixing Delphi / Object Pascal code — any .pas or .dpr unit, the RTL or the VCL — independently of any framework. Covers language level and version gating, inline var, generics, anonymous methods, memory and lifetime (Free, try/finally, interfaces, managed records), strings and encodings, exceptions, System.Generics.Collections, RTTI and attributes, threading, and the naming/formatting conventions. Triggers on "Delphi", "Object Pascal", "pas unit", "TStringList", "TObjectList", "memory leak", "double free", "interface reference", "anonymous method", "TThread", "TStringBuilder", "access violation", "compiler version".
+description: Use when writing, reviewing or fixing Delphi / Object Pascal code — any .pas or .dpr unit, the RTL or the VCL — independently of any framework. Covers language level and version gating, inline var, generics, anonymous methods, memory and lifetime (Free, try/finally, interfaces, managed records), strings and encodings, exceptions, System.Generics.Collections, RTTI and attributes, threading, migrating legacy code (Unicode, 64-bit, BDE), and the naming/formatting conventions. Triggers on "Delphi", "Object Pascal", "pas unit", "TStringList", "TObjectList", "memory leak", "double free", "interface reference", "anonymous method", "TThread", "TStringBuilder", "access violation", "compiler version", "legacy code", "migrate", "Win64", "undeclared identifier", "uses clause".
 ---
 
 # Delphi / Object Pascal — language and RTL guide
@@ -9,7 +9,66 @@ The foundation the DMVCFramework skills sit on. **Nothing here assumes a framewo
 it applies to a console app, a VCL form, a service, a library.
 
 Everything below was copied from the Delphi 13 Florence RTL/VCL source on disk, or confirmed on the
-official docwiki. Version boundaries were checked release by release, not recalled.
+official docwiki. Version boundaries were checked release by release, not recalled. The legacy-code and
+Win64 facts were additionally compiled and run with `dcc32` / `dcc64`.
+
+---
+
+## Critical rules — the ones that cost data or a day
+
+**Ownership.** Delphi objects are **not** garbage collected and **not** reference counted. Interfaces are.
+Records are managed by the compiler. Mixing the three is where the bugs live. Full treatment in
+`reference/memory.md`; these four rules cover most code:
+
+```delphi
+// 1. Create OUTSIDE the try. Inside is the classic bug: if Create raises,
+//    the finally frees an uninitialised reference.
+lList := TStringList.Create;
+try
+  ...
+finally
+  lList.Free;            // .Free is nil-safe; "if x <> nil then x.Free" is noise
+end;
+
+// 2. An object reached only through an interface is freed by the reference count.
+//    Never Free it, and never hold a second *object* reference to it.
+var lLogger: ILogger := TLogger.Create;   // released at end of scope
+
+// 3. Ownership is a property of the container, not a habit.
+var lPeople := TObjectList<TPerson>.Create;  // OwnsObjects defaults to True
+// Remove/Delete/Clear free the item; Extract/ExtractAt hand it back to you unfreed.
+// TStringList.Create and TDictionary do NOT own what they hold;
+// TObjectDictionary does only with [doOwnsValues] / [doOwnsKeys], and then d[k] := x frees the old value.
+
+// 4. A TComponent with an owner is freed by its owner. Do not free it yourself.
+lTimer := TTimer.Create(Self);   // Self frees it
+```
+
+`FreeAndNil` is not a synonym for `Free`. Use it for a **field** that outlives the statement and will be
+tested for `nil` later. On a local that is about to go out of scope it buys nothing and hides the fact that
+the variable is dead — see `reference/memory.md`.
+
+Handing an object to a new owner (a return value, an owning list): until the handoff it is yours, so free it
+on the failure path only (`except` + `raise`). `finally` there is a double free.
+
+**Text, bytes and pointers.** These compile clean, usually with no warning, and fail on the customer's data
+or only on Win64. Each was compiled and run (13 Florence and 12 Athens); evidence in
+`reference/legacy-migration.md`.
+
+5. **`Length(s)` counts UTF-16 units, not bytes.** `Move(s[1], lBuf, Length(s))` copies half of `'ABCD'` and
+   says nothing. Use `Length(s) * SizeOf(Char)` or `ByteLength(s)`; the same for `WriteBuffer`, `FillChar`.
+6. **Name the encoding on every file and stream call.** `TStringList.SaveToFile`, `TIniFile`, `AssignFile`
+   and `TStringStream.Create(string)` write ANSI (Cyrillic becomes `??`, `€` one byte); `TFile.WriteAllText`
+   and `TStreamWriter` write UTF-8. Pass `TEncoding.UTF8`. Table in `reference/strings.md`.
+7. **Never keep a pointer, object or handle in an `Integer`.** On Win64 `Integer(Obj)` compiles without a
+   warning and drops the high 32 bits. Use `NativeInt` / `NativeUInt` / `LONG_PTR`, and
+   `SetWindowLongPtr`, not `SetWindowLong` (`reference/legacy-migration.md`).
+8. **The VCL belongs to the main thread.** From a worker, `TThread.Synchronize` or `TThread.Queue`
+   (`reference/concurrency.md`).
+9. **Never swallow an exception.** A bare `except end` deletes the diagnosis: handle one class or re-`raise`
+   (`reference/exceptions.md`).
+10. **Match the target release.** A symbol from 13 Florence may not exist on 11 or 12: see *Language
+    level* below before writing version-dependent code.
 
 ---
 
@@ -196,40 +255,8 @@ This SKILL.md is the working core. Depth lives in `reference/`; open a file only
 | `reference/generics-and-rtti.md` | `System.Generics.Collections` / `.Defaults`, comparers, ownership flags, iteration invalidation, generic constraints, `System.Rtti`, writing and reading attributes |
 | `reference/concurrency.md` | `TThread`, `Synchronize`/`Queue`/`ForceQueue`, `TTask`/`ITask`, `TParallel.&For`, `TMonitor`, `TInterlocked`, and the VCL single-thread rule |
 | `reference/style.md` | Naming and formatting: the docwiki style guide, one widely-used community guide, and this repository's own house style — plus where they disagree |
-
----
-
-## Memory and lifetime — the non-negotiables
-
-Delphi objects are **not** garbage collected and **not** reference counted. Interfaces are. Records are
-managed by the compiler. Mixing the three is where the bugs live. Full treatment in `reference/memory.md`;
-these four rules cover most code:
-
-```delphi
-// 1. Create OUTSIDE the try. Inside is the classic bug: if Create raises,
-//    the finally frees an uninitialised reference.
-lList := TStringList.Create;
-try
-  ...
-finally
-  lList.Free;            // .Free is nil-safe; "if x <> nil then x.Free" is noise
-end;
-
-// 2. An object reached only through an interface is freed by the reference count.
-//    Never Free it, and never hold a second *object* reference to it.
-var lLogger: ILogger := TLogger.Create;   // released at end of scope
-
-// 3. Ownership is a property of the container, not a habit.
-var lPeople := TObjectList<TPerson>.Create;  // OwnsObjects defaults to True
-// Remove/Delete/Clear free the item; Extract/ExtractAt hand it back to you unfreed.
-
-// 4. A TComponent with an owner is freed by its owner. Do not free it yourself.
-lTimer := TTimer.Create(Self);   // Self frees it
-```
-
-`FreeAndNil` is not a synonym for `Free`. Use it for a **field** that outlives the statement and will be
-tested for `nil` later. On a local that is about to go out of scope it buys nothing and hides the fact that
-the variable is dead — see `reference/memory.md`.
+| `reference/units.md` | A compile error `E2003 Undeclared identifier`, or "which `uses` do I need": the full unit-by-unit table and the wrong-unit traps |
+| `reference/legacy-migration.md` | Moving old code forward: pre-Unicode strings, Win64 (pointer in `Integer`, `Extended`, `asm`), BDE/ADO/dbExpress to FireDAC, the search patterns and the order of work |
 
 ---
 
@@ -262,7 +289,10 @@ the variable is dead — see `reference/memory.md`.
 
 ---
 
-## Key units — what you go there for
+## Key units — which unit declares what
+
+The common ones. The full table, with the cases where one name lives in two units, is
+`reference/units.md`.
 
 | Unit | Go there for |
 |------|--------------|
@@ -276,9 +306,14 @@ the variable is dead — see `reference/memory.md`.
 | `System.Rtti` | `TRttiContext`, `TRttiType`, `TRttiProperty`, `TRttiMethod`, `TValue`, `TVirtualMethodInterceptor` |
 | `System.TypInfo` | `TTypeKind`, `GetEnumName`/`GetEnumValue`, lightweight property access without `System.Rtti` |
 | `System.IOUtils` | `TPath`, `TFile`, `TDirectory` |
+| `System.AnsiStrings` | the `PAnsiChar` / `AnsiString` versions of `StrLen`, `StrPas`, `StrPCopy`, `StrComp` (the `System.SysUtils` copies are deprecated) |
+| `System.Character` | `TCharacter`, `TCharHelper` — `c.IsLetter` and friends are invisible without this unit |
 | `System.StrUtils` | `SplitString`, `ContainsText`, `StartsText`/`EndsText`, `MatchStr`/`MatchText`, `IndexStr`, `IfThen`, `ReverseString` |
 | `System.Math` | `Min`/`Max`, `IfThen`, `InRange`, `EnsureRange`, `SameValue`, `IsZero` |
 | `System.DateUtils` | `IncDay`/`IncYear`, `DaysBetween`, `StartOfTheDay`, `ISO8601ToDate`, `DateToISO8601` (note: `IncMonth` lives in `System.SysUtils`) |
+| `System.RegularExpressions` | `TRegEx`, `TMatch`, `TGroup` |
+| `System.Diagnostics` | `TStopwatch` |
+| `System.IniFiles` | `TIniFile`, `TMemIniFile` |
 | `System.JSON` | `TJSONValue.ParseJSONValue`, `TJSONObject`, `TJSONArray` (DOM); `System.JSON.Serializers` for object mapping |
 | `System.NetEncoding` | `TNetEncoding.Base64`, `.URL`, `.HTML` |
 | `System.Hash` | `THashSHA2`, `THashMD5`, `THashBobJenkins` |

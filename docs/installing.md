@@ -69,6 +69,10 @@ Before writing Delphi or DelphiMVCFramework code, read the relevant skill:
 
 - `skills/delphi/SKILL.md` — the language and the RTL: version gating, lifetime, strings, generics, threading
 - `skills/delphi-code-smells/SKILL.md` — code review: compiler warnings, static analysis, memory leaks
+- `skills/delphi-build/SKILL.md` — building Delphi projects from the command line: msbuild, dcc32/dcc64, warnings as errors, exit codes
+- `skills/delphi-firedac/SKILL.md` — FireDAC in plain Delphi: connections, pooling, transactions, parameters and macros, cached updates
+- `skills/delphi-security/SKILL.md` — secure coding for desktop, service and client code: hashing, random, TLS, paths, secrets, logs
+- `skills/delphi-testing/SKILL.md` — unit tests with DUnitX: fixtures, attributes, assertions, CI exit codes, leak detection
 - `skills/dmvcframework/SKILL.md` — controllers, ActiveRecord, validation, DI, middleware, servers, dotEnv
 - `skills/dmvcframework-minimal-api/SKILL.md` — lambda routes, route groups, filters
 - `skills/dmvcframework-webapp/SKILL.md` — TemplatePro views, fragments, ViewData
@@ -77,6 +81,7 @@ Before writing Delphi or DelphiMVCFramework code, read the relevant skill:
 - `skills/dmvcframework-jsonrpc/SKILL.md` — JSON-RPC 2.0 services and client
 - `skills/dmvcframework-testing/SKILL.md` — DUnitX integration tests
 - `skills/htmx-skill/SKILL.md` — index of the htmx 2.x reference pages
+- `skills/exewatch-delphi/SKILL.md` — ExeWatch Delphi SDK: initialization, logging, device info, offline buffering, stack traces
 
 Do not write Delphi or DMVCFramework code from memory: the API names in these files are authoritative.
 ```
@@ -101,7 +106,7 @@ alwaysApply: false
 @skills/dmvcframework/SKILL.md
 ```
 
-Repeat for the other nine skills, changing `description` and the `@` path. Keep `alwaysApply: false` so they
+Repeat for the other fourteen skills, changing `description` and the `@` path. Keep `alwaysApply: false` so they
 stay out of context until relevant — then `@dmvcframework` in the chat pulls one in on demand.
 
 ## Gemini CLI — by hand

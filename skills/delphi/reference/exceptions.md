@@ -1,5 +1,23 @@
 # Delphi — exceptions
 
+## Critical rules
+
+- **Raise only classes that descend from `Exception`** (`System.SysUtils`). `raise EArgumentException.CreateFmt(...)`
+  creates the object; do not `Free` it, the exception mechanism does.
+- **`except` without `on` catches everything, and `except end` throws the diagnosis away.** Handle one
+  class you can act on, or re-`raise`.
+- **Never catch `EAccessViolation`, `EStackOverflow`, `EOutOfMemory` or `EAbort`.**
+- **`finally` releases; it must not raise.** An exception escaping a `finally` replaces the one in flight.
+- **`try ... except ... finally` in one block is a syntax error:** nest two.
+- **`Assert` can be compiled out**: never put logic or input validation in it.
+
+| Unit | Declares |
+|------|----------|
+| `System.SysUtils` | `Exception` and every class in the tree below, `Abort`, `RaiseLastOSError`, `Win32Check` |
+| `System` | `ExceptObject`, `ExceptAddr` |
+
+---
+
 ## The hierarchy
 
 `Exception` is declared in **`System.SysUtils`**, not `System`. Everything you raise should descend from it.

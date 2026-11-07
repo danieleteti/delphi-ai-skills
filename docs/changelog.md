@@ -1,11 +1,35 @@
 # Changelog
 
-**Unreleased** — `htmx-skill` now indexes the htmx **2.x** reference pages (release 2.0.11): 83 pages, up from
-79, with the descriptions htmx publishes for each page and a line for the pages it leaves undescribed (events,
-the extensions, the 1.x to 2.x migration guide). Links go to `v2.htmx.org` instead of `htmx.org`, so they keep
-describing 2.x when `htmx.org` moves to a newer major version, and the skill points htmx 4 projects to
-`https://four.htmx.org/llms.txt`. The README is now a short front page; installing, example prompts, layout,
-versioning and this changelog moved to `docs/`.
+**Unreleased** — five skills added, fifteen in total.
+
+- **`delphi-firedac`** — FireDAC in plain Delphi: the `uses` set for a non-visual program, connection definitions
+  and pooling, transactions (a connection closed with an open transaction *commits*), parameters and macros
+  (`&` and `!` prefixes), `RecordCount` and fetch options, array DML, cached updates (a second `ApplyUpdates`
+  inserts the rows again), who frees what, errors and threading, and a map from BDE/ADO/dbExpress.
+- **`delphi-testing`** — DUnitX: a project skeleton that compiles and runs, attributes, test data providers,
+  assertion semantics, CI exit codes (an empty run exits 0), per-test leak detection, testable code and
+  characterization tests.
+- **`delphi-build`** — `msbuild` and `dcc32`/`dcc64` from the command line: `Config` and not `Configuration`,
+  `Make` vs `Build`, warnings as errors by name, the compile-fix loop, and `scripts/build.bat`.
+- **`delphi-security`** — secure coding outside web servers: what `System.Hash` does and does not have, random
+  numbers, Base64, TLS and certificate handling in `THTTPClient`, FireDAC macros, paths, secrets, command
+  injection, DLL loading, untrusted lengths, and what a log or crash report must not contain.
+- **`exewatch-delphi`** — the ExeWatch Delphi SDK (version 0.25.0): initialization, logging, user and device
+  information, offline buffering, stack traces, server-side use.
+- **`delphi`** — a procedure and verified facts for moving old code forward (`reference/legacy-migration.md`),
+  a table of which unit declares what (`reference/units.md`), and a block of critical rules in each file.
+- **`delphi-code-smells`** — a staged review (discover, judge, refute, verify, report) with evidence labels
+  (VERIFIED, INFERRED, ASSUMED), and a search pattern for every smell.
+- **`htmx-skill`** — indexes the htmx **2.x** reference pages (release 2.0.11): 83 pages, up from 79, with a
+  line for each page. Links go to `v2.htmx.org` instead of `htmx.org`, so they keep describing 2.x when
+  `htmx.org` moves to a newer major version, and the skill points htmx 4 projects to
+  `https://four.htmx.org/llms.txt`.
+- Corrections: a comment in `delphi` claimed a closure over a `for var` loop prints `3 3 3`; it prints `4 4 4`
+  on 12 and 13. `delphi-code-smells`: several `rg` one-liners did not run or missed cases, and `leaks.md`
+  said both DUnitX leak adapters register only under a define (the FastMM5 one registers always and needs the
+  external `FastMM5.pas`).
+- The README is now a short front page; installing, example prompts, layout, versioning and this changelog
+  moved to `docs/`.
 
 **0.3.0** — `delphi-code-smells`: the review pass. Compiler warnings and hints that indicate a real bug —
 every code produced by running `dcc32` rather than recalled — `$WARN` and warnings-as-errors, leak detection

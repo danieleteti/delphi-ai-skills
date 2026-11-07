@@ -1,5 +1,28 @@
 # Delphi — threads, tasks and the UI rule
 
+## Critical rules
+
+- **Only the main thread touches a control, a form, `Application` or `Screen`.** From a worker use
+  `TThread.Queue` (posts, returns) or `TThread.Synchronize` (blocks until done).
+- **`Terminate` only sets a flag.** `Execute` must poll `Terminated` or the thread runs to the end.
+- **With `FreeOnTerminate = True` the thread reference dangles the moment `Execute` returns:** no `WaitFor`,
+  no field access, no `Free`. Need the result or a clean shutdown? Keep it `False`, `WaitFor`, then `Free`.
+- **A `Queue`d closure can outlive what it captured** (a closed form). Capture values, or
+  `RemoveQueuedEvents` in the destructor.
+- **`TCriticalSection` is in `System.SyncObjs`, not `System.Classes`.**
+- **Never `Sleep` on the main thread.**
+
+| Unit | Declares |
+|------|----------|
+| `System.Classes` | `TThread` (`Synchronize`, `Queue`, `ForceQueue`, `CreateAnonymousThread`) |
+| `System.SyncObjs` | `TCriticalSection`, `TEvent`, `TMutex`, `TSemaphore`, `TInterlocked`, `TSpinLock`, `TCountdownEvent`, `TLightweightMREW` |
+| `System.Threading` | `TTask`, `ITask`, `IFuture<T>`, `TParallel`, `TThreadPool` |
+| `System` | `TMonitor` |
+| `System.Generics.Collections` | `TThreadedQueue<T>` |
+| `Vcl.Controls` | `TControl.RaiseOnNonMainThreadUsage` |
+
+---
+
 ## The rule that comes first
 
 **The VCL is single-threaded. Only the main thread may touch a control, a form, `Application` or `Screen`.**

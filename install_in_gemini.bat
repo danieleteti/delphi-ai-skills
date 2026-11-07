@@ -56,6 +56,10 @@ if exist "!GEM!" (
 >>"!GEM!" echo.
 >>"!GEM!" echo - `skills/delphi/SKILL.md` — the language and the RTL: version gating, lifetime, strings, generics, threading
 >>"!GEM!" echo - `skills/delphi-code-smells/SKILL.md` — code review: compiler warnings, static analysis, memory leaks
+>>"!GEM!" echo - `skills/delphi-build/SKILL.md` — building Delphi projects from the command line: msbuild, dcc32/dcc64, warnings as errors, exit codes
+>>"!GEM!" echo - `skills/delphi-firedac/SKILL.md` — FireDAC in plain Delphi: connections, pooling, transactions, parameters and macros, cached updates
+>>"!GEM!" echo - `skills/delphi-security/SKILL.md` — secure coding for desktop, service and client code: hashing, random, TLS, paths, secrets, logs
+>>"!GEM!" echo - `skills/delphi-testing/SKILL.md` — unit tests with DUnitX: fixtures, attributes, assertions, CI exit codes, leak detection
 >>"!GEM!" echo - `skills/dmvcframework/SKILL.md` — controllers, ActiveRecord, validation, DI, middleware, servers, dotEnv
 >>"!GEM!" echo - `skills/dmvcframework-minimal-api/SKILL.md` — lambda routes, route groups, filters
 >>"!GEM!" echo - `skills/dmvcframework-webapp/SKILL.md` — TemplatePro views, fragments, ViewData
@@ -64,6 +68,7 @@ if exist "!GEM!" (
 >>"!GEM!" echo - `skills/dmvcframework-jsonrpc/SKILL.md` — JSON-RPC 2.0 services and client
 >>"!GEM!" echo - `skills/dmvcframework-testing/SKILL.md` — DUnitX integration tests
 >>"!GEM!" echo - `skills/htmx-skill/SKILL.md` — index of the htmx 2.x reference pages
+>>"!GEM!" echo - `skills/exewatch-delphi/SKILL.md` — ExeWatch Delphi SDK: initialization, logging, device info, offline buffering, stack traces
 >>"!GEM!" echo.
 >>"!GEM!" echo Do not write Delphi or DMVCFramework code from memory: the API names in these files are authoritative.
 

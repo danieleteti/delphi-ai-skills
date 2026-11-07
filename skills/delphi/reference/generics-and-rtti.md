@@ -1,5 +1,31 @@
 # Delphi — generics, collections, RTTI and attributes
 
+## Critical rules
+
+- **Never mutate a container while enumerating it.** Delphi's enumerators do not raise: `TList<T>`'s
+  `MoveNext` only compares an index with `Count` (read in the source), so you get skipped or repeated
+  items. Iterate backwards by index, or collect then delete.
+- **`TObjectList<T>` owns its items by default; `TList<T>` and `TDictionary<K,V>` own nothing.**
+  `TObjectDictionary<K,V>` needs `[doOwnsValues]`. See `reference/memory.md`.
+- **A closure captures the variable, not its value.** Compiled (12 and 13): closures created in a
+  `for var i := 1 to 3` loop all print `4`; with `var lCaptured := i` inside the body they all print `3`.
+  Only a call that makes its own frame (`MakeProc(i)`) gives `1 2 3`.
+- **A closure that captures `Self` or a local object keeps it alive, or outlives it.**
+- **`TArray<T>` is the dynamic-array type; `TArray` is a class of static helpers.** A dynamic array has no
+  methods.
+- **`THashSet<T>`, `TObjectHashSet<T>`, `TOrderedDictionary<K,V>` are not in Delphi 11.**
+
+| Unit | Declares |
+|------|----------|
+| `System.Generics.Collections` | `TList<T>`, `TObjectList<T>`, `TDictionary<K,V>`, `TObjectDictionary<K,V>`, `TQueue<T>`, `TStack<T>`, `THashSet<T>`, `TPair<K,V>`, `TEnumerable<T>`, `TArray` |
+| `System.Generics.Defaults` | `IComparer<T>`, `IEqualityComparer<T>`, `TComparer<T>`, `TDelegatedComparer<T>` |
+| `System.SysUtils` | `TProc`, `TFunc`, `TPredicate` |
+| `System.Rtti` | `TRttiContext`, `TValue`, `TVirtualMethodInterceptor` |
+| `System.TypInfo` | `GetEnumName`, `GetEnumValue` |
+| `System` | `TCustomAttribute`, `TArray<T>` |
+
+---
+
 ## `System.Generics.Collections` — what exists
 
 | Type | Notes |
@@ -190,8 +216,8 @@ captured alive. That is the whole point, and it is also the whole problem.
 // BROKEN — every closure sees the final value of i
 var lActions := TList<TProc>.Create;
 for var i := 1 to 3 do
-  lActions.Add(procedure begin Writeln(i); end);   // prints 3, 3, 3? — depends on the loop variable's
-                                                   // lifetime; do not rely on it either way
+  lActions.Add(procedure begin Writeln(i); end);   // compiled on 12 and 13: prints 4, 4, 4 (the counter
+                                                   // after the loop); do not rely on it either way
 
 // ALSO BROKEN — prints 3, 3, 3. An inline var inside the loop is NOT a new variable per pass:
 // every local the closure captures is hoisted into one frame object shared by the whole routine.

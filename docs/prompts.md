@@ -26,6 +26,34 @@ file, so it is listed first: it is what keeps the agent from writing C# in Pasca
 > *Make a memory leak fail the build*
 > *Why does this AV only happen on shutdown?*
 
+**`delphi-firedac`** — FireDAC in plain Delphi
+
+> *Why are my rows committed when I close the connection without calling Commit?*
+> *Set up FireDAC connection pooling for a Windows service*
+> *Insert 10,000 rows with array DML*
+> *Why does RecordCount return 50?*
+> *Move this BDE dataset code to FireDAC*
+
+**`delphi-testing`** — DUnitX
+
+> *Create a DUnitX console test project for this unit*
+> *Make the CI build fail when a test fails*
+> *Why does a test that leaks memory pass?*
+> *Write a golden-master test for this report, ignoring the timestamp line*
+
+**`delphi-build`** — command-line builds
+
+> *Build this project for Win64 and show me the first error*
+> *Turn W1035 into an error in the build*
+> *Why does msbuild build Debug when I passed Configuration=Release?*
+
+**`delphi-security`** — desktop, service and client code
+
+> *How should this desktop app store user passwords?*
+> *Is THTTPClient checking the server certificate?*
+> *Is this check enough to stop path traversal?*
+> *What must I keep out of this log?*
+
 **`dmvcframework`** — REST API, ORM, DI, validation
 
 > *Create a DMVCFramework REST controller for Customers with GET/POST/PUT/DELETE*
@@ -77,6 +105,11 @@ file, so it is listed first: it is what keeps the agent from writing C# in Pasca
 > *Add a notification method that the client fires without waiting for a result*
 > *Return a proper JSON-RPC error with a custom code instead of a 500*
 > *Who frees the object I return from an RPC method?*
+
+**`exewatch-delphi`** — the ExeWatch SDK, for projects that use it
+
+> *Add ExeWatch to this VCL app: initialize it, log errors and send stack traces*
+> *What happens to ExeWatch logs when the network is down?*
 
 **`htmx-skill`** — htmx reference
 

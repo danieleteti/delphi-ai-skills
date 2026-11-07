@@ -1,5 +1,18 @@
 # Delphi — naming and formatting
 
+## Critical rules
+
+- **The file you are editing wins.** Match its indentation, prefixes and `begin`/`end` layout over any guide.
+- **Do not copy a guide's code blindly.** The community guide quoted below puts `Create` inside the `try`,
+  which is a bug (see `reference/memory.md`).
+- **Full dotted unit names in `uses`** (`System.SysUtils`, not `SysUtils`), and `const` on parameters of
+  managed types (`string`, interfaces, dynamic arrays, records).
+- **No `with`.** It lets a later field of the object shadow a name in the enclosing scope.
+
+This file declares no RTL identifiers; for which unit declares what see `reference/units.md`.
+
+---
+
 Three sources are in play, and they do not fully agree. In order of authority:
 
 1. **Embarcadero's own style guide on the docwiki** — *Delphi's Object Pascal Style Guide*, curated by

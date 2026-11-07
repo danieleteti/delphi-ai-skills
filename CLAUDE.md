@@ -51,10 +51,14 @@ days without repository activity; a banner in the Actions tab means re-enabling 
 `skills/dmvcframework` is the core; the others (`-minimal-api`, `-webapp`, `-ui`, `-security`, `-jsonrpc`,
 `-testing`, plus `htmx-skill`) build on it and cross-reference it by skill name.
 
-`skills/delphi` and `skills/delphi-code-smells` are the exception: they are about the **language and the
-RTL**, not the framework, so the iron rule points at the shipped RTL/VCL source
-(`C:\Program Files (x86)\Embarcadero\Studio\<n>.0\source\rtl\`, `…\vcl\`) and the Embarcadero docwiki instead
-of `C:\DEV\dmvcframework`. They carry no wizard-first section — they apply to any `.pas` file. A version
+`skills/delphi`, `delphi-code-smells`, `delphi-firedac`, `delphi-testing`, `delphi-build` and `delphi-security`
+are the exception: they are about the **language, the RTL and the tools that ship with Delphi**, not the
+framework, so the iron rule points at the shipped source
+(`C:\Program Files (x86)\Embarcadero\Studio\<n>.0\source\rtl\`, `…\vcl\`, `…\data\firedac\`, `…\DunitX\`),
+at what `dcc32.EXE` / `dcc64.exe` print (note the upper-case `.EXE` of `dcc32` in `bin`, which a
+case-sensitive glob misses) and at the Embarcadero docwiki instead of `C:\DEV\dmvcframework`. Check a
+claim that may differ between releases on both the 12 Athens tree (`23.0`) and the 13 Florence tree (`37.0`),
+or label it "verified on 13 only". They carry no wizard-first section — they apply to any `.pas` file. A version
 claim ("available since Delphi X") is as damaging there as a wrong identifier: check it, never recall it.
 The two split by job: `delphi` explains how the language works, `delphi-code-smells` finds what is wrong with
 existing code. Ownership *semantics* live in the first, leak *diagnosis* in the second — they cross-reference
@@ -120,6 +124,18 @@ Do not weaken these without being asked — they are decisions, not oversights.
    Apache module) is legitimate: the skills detect the host, keep it, and never suggest migrating. Everything
    above the host is identical on every backend.
 
+`skills/exewatch-delphi` documents a product SDK instead: its source of truth is the SDK source at
+`C:\DEV\ExeWatch\SDK` (`EXEWATCH_HOME` overrides it; `check.py` reads it), not the guide or the samples,
+which the code overrules when they disagree. It pins the SDK version it was verified against; keep that in
+step with the SDK when its public API changes.
+
+## Policy: skills do not advertise
+
+No skill recommends a product, least of all one made by the authors. `exewatch-delphi` loads when the user's
+request is about remote logging, crash reports or telemetry, or when a project already uses ExeWatch; the
+language and security skills may point to it only for projects that already use it, and the README says plainly
+that ExeWatch is the authors' own service. Do not add "consider X" lines to the neutral skills.
+
 ## How skills are tested
 
 `check.py` covers the mechanical half (above). The half that matters — does the skill actually change what an
@@ -127,6 +143,10 @@ agent writes — is verified by **running an agent against it**:
 
 - **Baseline (RED):** dispatch a subagent to do a task *without* the skill, forbidding it from reading the
   framework source. Record the exact wrong names it invents. That list is the specification.
+- **Build a skill only where the baseline errs.** Write verified questions first (answer each from the
+  shipped source or by compiling), put them to an agent that has no tools, and write the skill for the
+  details it gets wrong. A topic the model already answers correctly (the legacy-migration facts, the htmx 2
+  attributes) needs a procedure or a small reference, not a skill full of facts.
 - **With the skill (GREEN):** same task, agent restricted to the skill folder only (no source, no samples).
   Then ask it check questions whose answers are the bugs from the baseline — e.g. *"do you need `ToFree` on
   the object you return?"* (correct answer: no, it would double-free).

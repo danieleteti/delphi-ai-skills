@@ -43,10 +43,31 @@ skills/
     reference/generics-and-rtti.md  Generics.Collections/Defaults, comparers, RTTI, attributes
     reference/concurrency.md        TThread, Synchronize/Queue, TTask, TParallel, the VCL rule
     reference/style.md              docwiki style guide vs community guide vs house style
+    reference/legacy-migration.md   moving old code forward: Unicode, 64-bit, BDE/ADO/dbExpress to FireDAC
+    reference/units.md              which unit declares what
   delphi-code-smells/
     SKILL.md                        order of attack for a review, the ranked defect table
     reference/static-analysis.md    verified warning/hint codes, $WARN, warnings-as-errors, the tools
     reference/leaks.md              the shipped memory manager, reading a leak report, failing a build on one
     reference/smells.md             the catalogue: bad code, what breaks, the fix, how to detect it
+    reference/review-procedure.md   discover, judge, refute, verify, report; evidence labels; report template
+    reference/discovery.md          one search pattern per smell, with what it misses
+  delphi-firedac/
+    SKILL.md                        critical rules, the console skeleton, unit table
+    reference/                      uses-and-drivers, connections-and-threads, transactions,
+                                    commands-params-macros, fetching-and-bulk, cached-updates, errors, migration
+  delphi-testing/
+    SKILL.md                        critical rules, the DUnitX project skeleton
+    reference/                      attributes, assertions, runner-ci, testable-code, characterization
+  delphi-build/
+    SKILL.md                        critical rules, the compile-fix loop
+    reference/                      msbuild, dcc, warnings
+    scripts/build.bat               find the newest Studio and build a .dproj with a clean exit code
+  delphi-security/
+    SKILL.md                        the traps, with detection patterns
+    reference/                      crypto-code (SecCrypto), os-code (SecOs), logging-and-monitoring (SecLog)
+  exewatch-delphi/
+    SKILL.md                        pinned SDK version, critical rules
+    reference/                      api, stacktraces, offline-and-config, server-and-targets
   htmx-skill/SKILL.md
 ```

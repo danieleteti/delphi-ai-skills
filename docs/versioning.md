@@ -33,7 +33,7 @@ and in the README. It exits non-zero on any defect, so it fits a pre-commit hook
 `python check.py --urls` adds the one check that needs the network: every link in `htmx-skill` must answer 200.
 
 It reads `C:\DEV\dmvcframework` and your Delphi `source\` tree — override with `DMVC_HOME` and
-`DELPHI_SOURCE`. Without either it still runs, and skips the identifier check rather than failing.
+`DELPHI_SOURCE` (and `EXEWATCH_HOME` for the ExeWatch SDK). Without them it still runs, and skips the identifier check rather than failing.
 
 It proves a name *exists*, not that it is used correctly: a real API called with the wrong arguments needs a
 compiler, and an ownership bug needs to be run. See CLAUDE.md for the two levels above this one.

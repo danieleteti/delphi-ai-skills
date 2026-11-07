@@ -58,6 +58,10 @@ if exist "!AGENTS!" (
 >>"!AGENTS!" echo.
 >>"!AGENTS!" echo - `skills/delphi/SKILL.md` — the language and the RTL: version gating, lifetime, strings, generics, threading
 >>"!AGENTS!" echo - `skills/delphi-code-smells/SKILL.md` — code review: compiler warnings, static analysis, memory leaks
+>>"!AGENTS!" echo - `skills/delphi-build/SKILL.md` — building Delphi projects from the command line: msbuild, dcc32/dcc64, warnings as errors, exit codes
+>>"!AGENTS!" echo - `skills/delphi-firedac/SKILL.md` — FireDAC in plain Delphi: connections, pooling, transactions, parameters and macros, cached updates
+>>"!AGENTS!" echo - `skills/delphi-security/SKILL.md` — secure coding for desktop, service and client code: hashing, random, TLS, paths, secrets, logs
+>>"!AGENTS!" echo - `skills/delphi-testing/SKILL.md` — unit tests with DUnitX: fixtures, attributes, assertions, CI exit codes, leak detection
 >>"!AGENTS!" echo - `skills/dmvcframework/SKILL.md` — controllers, ActiveRecord, validation, DI, middleware, servers, dotEnv
 >>"!AGENTS!" echo - `skills/dmvcframework-minimal-api/SKILL.md` — lambda routes, route groups, filters
 >>"!AGENTS!" echo - `skills/dmvcframework-webapp/SKILL.md` — TemplatePro views, fragments, ViewData
@@ -66,6 +70,7 @@ if exist "!AGENTS!" (
 >>"!AGENTS!" echo - `skills/dmvcframework-jsonrpc/SKILL.md` — JSON-RPC 2.0 services and client
 >>"!AGENTS!" echo - `skills/dmvcframework-testing/SKILL.md` — DUnitX integration tests
 >>"!AGENTS!" echo - `skills/htmx-skill/SKILL.md` — index of the htmx 2.x reference pages
+>>"!AGENTS!" echo - `skills/exewatch-delphi/SKILL.md` — ExeWatch Delphi SDK: initialization, logging, device info, offline buffering, stack traces
 >>"!AGENTS!" echo.
 >>"!AGENTS!" echo Do not write Delphi or DMVCFramework code from memory: the API names in these files are authoritative.
 

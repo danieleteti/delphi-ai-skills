@@ -1,5 +1,32 @@
 # Delphi — memory and lifetime
 
+## Critical rules
+
+- **Acquire, then `try`.** `Create` goes before `try`, `Free` in `finally`. A constructor inside the `try`
+  makes the `finally` free an uninitialised reference when it raises.
+- **A handoff is `except` + `raise`, never `finally`.** Until the object reaches its new owner (a return
+  value, an owning list) it is yours; after, `Free` is a double free.
+- **An object held through an interface is never `Free`d**, and you never keep a second *object* reference
+  to it: the reference count frees it while your pointer is still in use.
+- **Know what a container frees.** Compiled and run on 12 and 13: `TObjectList<T>.Create` owns (`Delete`
+  freed the item, `Extract` did not); `TStringList.Create` and `TDictionary` free nothing;
+  `TObjectDictionary` frees only with `[doOwnsValues]` / `[doOwnsKeys]`, and `d[k] := x` there frees the
+  value it replaces.
+- **A `TComponent` with an owner is freed by that owner.** Freeing it yourself is a double free.
+- **No `DisposeOf`.** `System.pas` declares it `deprecated 'Use Free instead'`; there is no ARC for objects.
+
+| Unit | Declares |
+|------|----------|
+| `System` | `TObject`, `IInterface`, `TInterfacedObject`, `TNoRefCountObject` |
+| `System.SysUtils` | `FreeAndNil` |
+| `System.Classes` | `TComponent`, `TStringList` |
+| `System.Generics.Collections` | `TObjectList<T>`, `TObjectDictionary<K,V>`, `TDictionary<K,V>`, `TObjectQueue<T>`, `TObjectStack<T>`, `TObjectHashSet<T>` |
+| `System.Contnrs` | the pre-generics `TObjectList` (do not mix it up with the generic one) |
+
+Full table: `reference/units.md`.
+
+---
+
 Delphi has **three** lifetime models running at once. Almost every leak, double free and access violation
 comes from treating a value as if it belonged to a different one.
 
