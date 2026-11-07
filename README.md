@@ -89,6 +89,10 @@ The agent reads the project, loads the right skills, and writes code against the
 |-------|----------------|-----------------|
 | **`delphi`** | The language itself, no framework assumed: version gating (what compiles on 11 vs 12 vs 13), inline `var`, memory and lifetime, strings and encodings, exceptions, `System.Generics.Collections`, RTTI, threading, naming conventions. | Write or review any Delphi code — it underpins all the others. |
 | **`delphi-code-smells`** | Reviewing code, not writing it: the compiler warnings and hints that mean a real bug, warnings-as-errors, leak detection and how to make a leak fail the build, third-party static analysis, and a catalogue of smells each with a way to find it. | Review, audit or refactor Delphi code — or hunt a leak or an AV. |
+| **`delphi-firedac`** | FireDAC in plain Delphi: the `uses` set for a non-visual program, connection definitions and pooling, transactions, parameters and macros, `RecordCount` and fetch options, array DML, cached updates, who frees what, and a map from BDE/ADO/dbExpress. | Use FireDAC, or move a BDE/ADO/dbExpress app to it. |
+| **`delphi-testing`** | DUnitX: a project skeleton that compiles and runs, attributes, test data providers, assertion semantics, CI exit codes, per-test leak detection, testable code, characterization tests. | Write unit tests for plain Delphi code. |
+| **`delphi-build`** | `msbuild` and `dcc32`/`dcc64` from the command line: `Config` vs `Configuration`, `Make` vs `Build`, warnings as errors by name, the compile-fix loop, `scripts/build.bat`. | Build or verify a project without the IDE. |
+| **`delphi-security`** | Secure coding outside web servers: password hashing, random numbers, TLS in `THTTPClient`, paths, secrets, command injection, DLL loading, what a log must not contain. | Review desktop, service or client code (servers: `dmvcframework-security`). |
 | **`dmvcframework`** | The core: engine bootstrap and the server backends, controllers and functional actions, routing attributes, `IMVCResponse`, object-ownership rules, ActiveRecord ORM, the Repository pattern, the DI service container, validation, middleware, JWT, SSE, dotEnv configuration. | Build a REST API or any server-side feature with controller classes. |
 | **`dmvcframework-minimal-api`** | The Minimal API: lambda routes with no controller class — route groups (`Prefix`, `MapGet`/`MapPost`/`MapMethods`), type-driven parameter binding, records from the query string, file uploads, endpoint filters vs HTTP filters, `.AsWeb` for TemplatePro/HTMX handlers. | Write routes as anonymous methods instead of controller classes — REST *or* web app. |
 | **`dmvcframework-webapp`** | Server-side web apps: TemplatePro templates (inheritance, blocks, filters, partials), fragments, `ViewData` and its ownership rules, cookie/JWT login, static files, the HTMX helpers on the Delphi side. | Render HTML pages and HTMX fragments from Delphi. |
@@ -97,6 +101,11 @@ The agent reads the project, loads the right skills, and writes code against the
 | **`dmvcframework-jsonrpc`** | JSON-RPC 2.0 services: publishing a controller, which methods are callable, `function` = request vs `procedure` = notification, named and positional parameters, who frees what, error codes, hooks, and the `IMVCJSONRPCExecutor` client. | Expose or consume a JSON-RPC endpoint. |
 | **`dmvcframework-testing`** | Integration and unit tests: an in-process `IMVCServer` + `IMVCRESTClient` + DUnitX; CRUD, authentication and authorization test patterns; database fixtures. | Write tests for a DMVCFramework API. |
 | **`htmx-skill`** | An index of the htmx **2.x** reference pages (generated from the 2.0.11 docs), each with a description, so the agent fetches and reads the right page instead of recalling htmx from memory. | Ask about any htmx attribute, trigger/swap modifier, event, header or extension. |
+| **`exewatch-delphi`** | The ExeWatch Delphi SDK (0.25.0): initialization, logging, user and device information, offline buffering, stack traces, server-side use. | Add or fix ExeWatch in a Delphi app. |
+
+`exewatch-delphi` documents the SDK of ExeWatch, an application-monitoring service made by the authors of this
+repository. It loads only when a project uses ExeWatch or the request is about remote logging or crash reports.
+No other skill recommends it; `delphi-security` points to it only for projects that already use it.
 
 They are complementary: the Minimal API, web-app and JSON-RPC skills assume the core one for entities,
 validation and DI, and all of them sit on `delphi` for the language itself. Every server skill requires
@@ -149,6 +158,34 @@ file, so it is listed first: it is what keeps the agent from writing C# in Pasca
 > *Make a memory leak fail the build*
 > *Why does this AV only happen on shutdown?*
 
+**`delphi-firedac`** — FireDAC in plain Delphi
+
+> *Why are my rows committed when I close the connection without calling Commit?*
+> *Set up FireDAC connection pooling for a Windows service*
+> *Insert 10,000 rows with array DML*
+> *Why does RecordCount return 50?*
+> *Move this BDE dataset code to FireDAC*
+
+**`delphi-testing`** — DUnitX
+
+> *Create a DUnitX console test project for this unit*
+> *Make the CI build fail when a test fails*
+> *Why does a test that leaks memory pass?*
+> *Write a golden-master test for this report, ignoring the timestamp line*
+
+**`delphi-build`** — command-line builds
+
+> *Build this project for Win64 and show me the first error*
+> *Turn W1035 into an error in the build*
+> *Why does msbuild build Debug when I passed Configuration=Release?*
+
+**`delphi-security`** — desktop, service and client code
+
+> *How should this desktop app store user passwords?*
+> *Is THTTPClient checking the server certificate?*
+> *Is this check enough to stop path traversal?*
+> *What must I keep out of this log?*
+
 **`dmvcframework`** — REST API, ORM, DI, validation
 
 > *Create a DMVCFramework REST controller for Customers with GET/POST/PUT/DELETE*
@@ -200,6 +237,11 @@ file, so it is listed first: it is what keeps the agent from writing C# in Pasca
 > *Add a notification method that the client fires without waiting for a result*
 > *Return a proper JSON-RPC error with a custom code instead of a 500*
 > *Who frees the object I return from an RPC method?*
+
+**`exewatch-delphi`** — the ExeWatch SDK, for projects that use it
+
+> *Add ExeWatch to this VCL app: initialize it, log errors and send stack traces*
+> *What happens to ExeWatch logs when the network is down?*
 
 **`htmx-skill`** — htmx reference
 
@@ -307,6 +349,10 @@ Before writing Delphi or DelphiMVCFramework code, read the relevant skill:
 
 - `skills/delphi/SKILL.md` — the language and the RTL: version gating, lifetime, strings, generics, threading
 - `skills/delphi-code-smells/SKILL.md` — code review: compiler warnings, static analysis, memory leaks
+- `skills/delphi-build/SKILL.md` — building Delphi projects from the command line: msbuild, dcc32/dcc64, warnings as errors, exit codes
+- `skills/delphi-firedac/SKILL.md` — FireDAC in plain Delphi: connections, pooling, transactions, parameters and macros, cached updates
+- `skills/delphi-security/SKILL.md` — secure coding for desktop, service and client code: hashing, random, TLS, paths, secrets, logs
+- `skills/delphi-testing/SKILL.md` — unit tests with DUnitX: fixtures, attributes, assertions, CI exit codes, leak detection
 - `skills/dmvcframework/SKILL.md` — controllers, ActiveRecord, validation, DI, middleware, servers, dotEnv
 - `skills/dmvcframework-minimal-api/SKILL.md` — lambda routes, route groups, filters
 - `skills/dmvcframework-webapp/SKILL.md` — TemplatePro views, fragments, ViewData
@@ -315,6 +361,7 @@ Before writing Delphi or DelphiMVCFramework code, read the relevant skill:
 - `skills/dmvcframework-jsonrpc/SKILL.md` — JSON-RPC 2.0 services and client
 - `skills/dmvcframework-testing/SKILL.md` — DUnitX integration tests
 - `skills/htmx-skill/SKILL.md` — index of the htmx 2.x reference pages
+- `skills/exewatch-delphi/SKILL.md` — ExeWatch Delphi SDK: initialization, logging, device info, offline buffering, stack traces
 
 Do not write Delphi or DMVCFramework code from memory: the API names in these files are authoritative.
 ```
@@ -400,11 +447,32 @@ skills/
     reference/generics-and-rtti.md  Generics.Collections/Defaults, comparers, RTTI, attributes
     reference/concurrency.md        TThread, Synchronize/Queue, TTask, TParallel, the VCL rule
     reference/style.md              docwiki style guide vs community guide vs house style
+    reference/legacy-migration.md   moving old code forward: Unicode, 64-bit, BDE/ADO/dbExpress to FireDAC
+    reference/units.md              which unit declares what
   delphi-code-smells/
     SKILL.md                        order of attack for a review, the ranked defect table
     reference/static-analysis.md    verified warning/hint codes, $WARN, warnings-as-errors, the tools
     reference/leaks.md              the shipped memory manager, reading a leak report, failing a build on one
     reference/smells.md             the catalogue: bad code, what breaks, the fix, how to detect it
+    reference/review-procedure.md   discover, judge, refute, verify, report; evidence labels; report template
+    reference/discovery.md          one search pattern per smell, with what it misses
+  delphi-firedac/
+    SKILL.md                        critical rules, the console skeleton, unit table
+    reference/                      uses-and-drivers, connections-and-threads, transactions,
+                                    commands-params-macros, fetching-and-bulk, cached-updates, errors, migration
+  delphi-testing/
+    SKILL.md                        critical rules, the DUnitX project skeleton
+    reference/                      attributes, assertions, runner-ci, testable-code, characterization
+  delphi-build/
+    SKILL.md                        critical rules, the compile-fix loop
+    reference/                      msbuild, dcc, warnings
+    scripts/build.bat               find the newest Studio and build a .dproj with a clean exit code
+  delphi-security/
+    SKILL.md                        the traps, with detection patterns
+    reference/                      crypto-code (SecCrypto), os-code (SecOs), logging-and-monitoring (SecLog)
+  exewatch-delphi/
+    SKILL.md                        pinned SDK version, critical rules
+    reference/                      api, stacktraces, offline-and-config, server-and-targets
   htmx-skill/SKILL.md
 ```
 
@@ -428,6 +496,7 @@ re-running the same task to confirm the agent gets it right.
 |---|---|
 | **Skills version** | **0.3.0** (pre-1.0) |
 | **Targets DelphiMVCFramework** | **3.5.x** (`silicon`) — branch `dmvc-3.5` |
+| **Verified against** | Delphi 13 Florence (and 12 Athens where a skill says so), DelphiMVCFramework 3.5.0, ExeWatch Delphi SDK 0.25.0 |
 | Delphi | The framework supports 10.2 Tokyo and later; the wizard projects these skills assume target 11 Alexandria or later |
 
 The skills version is independent of the framework's.
@@ -484,6 +553,31 @@ It proves a name *exists*, not that it is used correctly: a real API called with
 compiler, and an ownership bug needs to be run. See CLAUDE.md for the two levels above this one.
 
 ### Changelog
+
+**Unreleased** — five skills added, fifteen in total.
+
+- **`delphi-firedac`** — FireDAC in plain Delphi: the `uses` set for a non-visual program, connection definitions
+  and pooling, transactions (a connection closed with an open transaction *commits*), parameters and macros
+  (`&` and `!` prefixes), `RecordCount` and fetch options, array DML, cached updates (a second `ApplyUpdates`
+  inserts the rows again), who frees what, errors and threading, and a map from BDE/ADO/dbExpress.
+- **`delphi-testing`** — DUnitX: a project skeleton that compiles and runs, attributes, test data providers,
+  assertion semantics, CI exit codes (an empty run exits 0), per-test leak detection, testable code and
+  characterization tests.
+- **`delphi-build`** — `msbuild` and `dcc32`/`dcc64` from the command line: `Config` and not `Configuration`,
+  `Make` vs `Build`, warnings as errors by name, the compile-fix loop, and `scripts/build.bat`.
+- **`delphi-security`** — secure coding outside web servers: what `System.Hash` does and does not have, random
+  numbers, Base64, TLS and certificate handling in `THTTPClient`, FireDAC macros, paths, secrets, command
+  injection, DLL loading, untrusted lengths, and what a log or crash report must not contain.
+- **`exewatch-delphi`** — the ExeWatch Delphi SDK (version 0.25.0): initialization, logging, user and device
+  information, offline buffering, stack traces, server-side use.
+- **`delphi`** — a procedure and verified facts for moving old code forward (`reference/legacy-migration.md`),
+  a table of which unit declares what (`reference/units.md`), and a block of critical rules in each file.
+- **`delphi-code-smells`** — a staged review (discover, judge, refute, verify, report) with evidence labels
+  (VERIFIED, INFERRED, ASSUMED), and a search pattern for every smell.
+- Corrections: a comment in `delphi` claimed a closure over a `for var` loop prints `3 3 3`; it prints `4 4 4`
+  on 12 and 13. `delphi-code-smells`: several `rg` one-liners did not run or missed cases, and `leaks.md`
+  said both DUnitX leak adapters register only under a define (the FastMM5 one registers always and needs the
+  external `FastMM5.pas`).
 
 **0.3.0** — `delphi-code-smells`: the review pass. Compiler warnings and hints that indicate a real bug —
 every code produced by running `dcc32` rather than recalled — `$WARN` and warnings-as-errors, leak detection

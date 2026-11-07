@@ -179,9 +179,17 @@ separately if you want to report it.
 three `…MemoryAllocated` functions. It is registered automatically when nothing else has been
 (`DUnitX.TestFramework.pas`). So out of the box **every test reports zero bytes leaked, always.**
 
-The real monitors — `DUnitX.MemoryLeakMonitor.FastMM4.pas` and `…FastMM5.pas` — register themselves only
-under `{$IFDEF USE_FASTMM4_LEAK_MONITOR}`, and `DUnitX.MemoryLeaks.inc` ships with that define commented
-out, above this shipped comment:
+There are two real monitors, and they are enabled differently (read from the 37.0 source):
+
+- `DUnitX.MemoryLeakMonitor.FastMM4.pas` registers itself only under `{$IFDEF USE_FASTMM4_LEAK_MONITOR}`.
+  `DUnitX.MemoryLeaks.inc` ships with that define commented out, above this shipped comment. Despite the
+  name it uses no external FastMM unit: it measures with `GetMemoryManagerState` from `System`.
+- `DUnitX.MemoryLeakMonitor.FastMM5.pas` has **no define**: if the unit is in the project, its
+  `initialization` registers it. It needs `FastMM5.pas`, which is not in the Delphi source tree, and the
+  registered factory raises `You must add FastMM5.pas in your project as the first's unit in .dpr!` when
+  FastMM5 is not the installed memory manager.
+
+The FastMM4 define comment reads:
 
 > *Uncomment to use FastMM4 Memory Leak Tracking. NOTE : Memory leak tracking does not work very well at
 > the moment, as it's reporting leaks when logging information during tests (calls to .Status etc).*

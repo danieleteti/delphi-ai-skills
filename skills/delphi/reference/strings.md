@@ -1,5 +1,35 @@
 # Delphi — strings, encodings and text
 
+## Critical rules
+
+- **`string` is UTF-16 and 1-based; `Length` counts code units, not bytes.** `s[0]` is wrong. The
+  `TStringHelper` methods (`Chars`, `IndexOf`, `Substring`) are 0-based: pick one style per routine.
+- **Byte counts need `* SizeOf(Char)`** (or `ByteLength`). `Move(s[1], buf, Length(s))` copies half the
+  text and the compiler is silent.
+- **Name the encoding on every file and stream call.** The defaults differ per class and several write ANSI
+  (table under *Encoding*). Never use `TEncoding.Default` for anything that leaves the process: on Windows
+  it *is* `TEncoding.ANSI`, the machine's active code page.
+- **`Format` arguments are not type-checked:** `Format('%d', ['x'])` compiles and raises at run time.
+- **Identifiers and tokens: `SameText`. Text a person reads: `AnsiCompareText`.** Never compare a secret
+  with `=`.
+- **Assigning `string` to `AnsiString` converts, silently** (W1057/W1058 are the only hint).
+  `PAnsiChar(s)` reinterprets UTF-16 bytes: for `s := 'abc'`, `StrLen(PAnsiChar(s))` is 1.
+
+| Unit | Declares |
+|------|----------|
+| `System` | `UTF8Encode`, `UTF8ToString`, `WideCharToString` (and the string types themselves) |
+| `System.SysUtils` | `TEncoding`, `TStringBuilder`, `TStringHelper`, `Format`, `TFormatSettings`, `SameText`, `CompareText`, `TryStrToInt`, `ByteLength`, `CharInSet` |
+| `System.Classes` | `TStringList`, `TStrings`, `TStreamReader`, `TStreamWriter`, `TStringStream` |
+| `System.IOUtils` | `TFile` (`ReadAllText`, `WriteAllText`) |
+| `System.StrUtils` | `SplitString`, `ContainsText`, `StartsText` |
+| `System.Character` | `TCharHelper`: `c.IsLetter` is invisible without it |
+| `System.AnsiStrings` | `AnsiString` / `PAnsiChar` versions of `StrLen`, `StrPas`, `SameText`, ... |
+| `System.IniFiles` | `TIniFile`, `TMemIniFile` |
+
+Full table: `reference/units.md`.
+
+---
+
 ## The types
 
 | Type | What it is | Where |
@@ -173,6 +203,22 @@ lStrings.SaveToFile(lPath, TEncoding.UTF8);
 TFile.WriteAllText(lPath, lText, TEncoding.UTF8);     // System.IOUtils
 var lReader := TStreamReader.Create(lStream, TEncoding.UTF8);
 ```
+
+What you get when you omit the encoding. Compiled and read back byte by byte on 12 and 13 (the code page
+is the machine's: 1252 on the test PC):
+
+| Call, no encoding | Writes | Reads |
+|-------------------|--------|-------|
+| `TStringList.SaveToFile` / `LoadFromFile` | ANSI, no BOM: `€` becomes `80`, two Cyrillic letters `3F 3F` | UTF-8 BOM honoured; **no BOM → ANSI**: `C3 A9 E2 82 AC 78` reads as 6 characters, not 3 |
+| `TFile.WriteAllText` / `ReadAllText` | UTF-8, **no BOM** | valid UTF-8 with or without BOM; invalid UTF-8 falls back to ANSI |
+| `TStreamWriter.Create(fn)` / `TStreamReader.Create(fn)` | UTF-8, no BOM | UTF-8 |
+| `TIniFile.Create(fn)` / `TMemIniFile.Create(fn)` | ANSI (`#$0416` becomes `3F`) | — |
+| `AssignFile` + `Writeln` | ANSI | — |
+| `TStringStream.Create(string)` | ANSI: `é€x` is 3 bytes | — |
+
+Passing `TEncoding.UTF8` explicitly to `TFile.WriteAllText` **adds a BOM** (5 bytes for `é`); the
+no-encoding overload does not. `TMemIniFile.Create(fn, TEncoding.UTF8)` exists; `TIniFile` has no encoding
+parameter. More in `reference/legacy-migration.md`.
 
 `TEncoding.GetBufferEncoding(Buffer, AEncoding)` detects a BOM and returns its length. From
 **12 Athens** there is also `TEncoding.IsBufferValid` and a `UseBOM` property, for BOM-less UTF-8 detection.

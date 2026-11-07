@@ -34,9 +34,13 @@ DMVC = os.environ.get('DMVC_HOME', r'C:\DEV\dmvcframework')
 STUDIO_TREES = [p for p in (os.environ.get('DELPHI_SOURCE') or '').split(';') if p] or \
     sorted(glob.glob(r'C:\Program Files (x86)\Embarcadero\Studio\*\source'), reverse=True)
 
+# The ExeWatch SDK: the exewatch-delphi skill is checked against it (EXEWATCH_HOME overrides the folder).
+EXEWATCH = os.environ.get('EXEWATCH_HOME', r'C:\DEV\ExeWatch\SDK')
+
 SOURCE_DIRS = [os.path.join(DMVC, d) for d in ('sources', 'samples', 'ideexpert', 'lib')] + \
               [os.path.join(s, d) for s in STUDIO_TREES
-               for d in ('rtl', 'vcl', 'data', 'DunitX', 'internet')]
+               for d in ('rtl', 'vcl', 'data', 'DunitX', 'internet')] + \
+              [os.path.join(EXEWATCH, d) for d in ('Delphi', 'DLL')]
 
 # Skills whose prose is not Delphi at all.
 NO_DELPHI = {'htmx-skill'}

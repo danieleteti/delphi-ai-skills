@@ -15,6 +15,10 @@ is recalled.
 dcc32.exe -H -W MyProject.dpr     # -H = output hint messages, -W = output warning messages
 ```
 
+With **no** flag, `dcc32` still printed the default-on warnings (`W1010`, `W1035`, `W1036` all appeared on a
+test unit). A bare `-W` also turns on warnings that are off by default: `W1048` appeared only
+with it. `-W-` printed none.
+
 In a `.dproj`, the two MSBuild properties are `DCC_Hints` and `DCC_Warnings`
 (they feed the compiler's `Hints=` / `Warnings=` options in `CodeGear.Delphi.Targets`). In the IDE the same
 settings live under *Project Options → Delphi Compiler → Hints and Warnings*; the exact menu path has moved

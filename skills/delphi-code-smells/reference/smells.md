@@ -7,8 +7,10 @@ it**. An entry with no detection method would be an opinion, and opinions do not
 `delphi`, `reference/exceptions.md`; the threading semantics are `delphi`, `reference/concurrency.md`.
 This file says how to find them.
 
-Detection greps are written for `rg` (ripgrep). `-U` enables multiline. They are heuristics that produce a
-shortlist to read — none of them is a verdict.
+The searches that find each smell are in `reference/discovery.md`, under the same number as the entry here.
+They were run on sample code, each says what it misses, and they work in `rg` and in PowerShell. (The one-line
+`rg` commands this file used to carry were replaced: several needed `-P` or `-U` and found nothing, or failed
+to compile, in a default `rg`.) A search produces a shortlist to read; none of them is a verdict.
 
 ---
 
@@ -41,13 +43,7 @@ finally
 end;
 ```
 
-**Detect**
-
-```bash
-rg -n -U 'try\s*\n\s*\w+\s*:=\s*T\w+\.Create'
-```
-
-Also flagged by **W1036** (`Variable might not have been initialized`) when the variable is a plain local
+**Detect** `discovery.md` §1. Also flagged by **W1036** (`Variable might not have been initialized`) when the variable is a plain local
 and the compiler can see the path — but it does *not* fire in every shape, so grep as well.
 
 ---
@@ -69,15 +65,7 @@ end;
 
 **Fix** wrap it. Two objects, two nested `try` blocks.
 
-**Detect** — the highest-yield grep in this file. List every construction, then check each routine for a
-`finally`:
-
-```bash
-rg -n ':=\s*T\w+\.Create'          # every construction
-rg -n -U 'T\w+\.Create[^;]*;(?:(?!\bfinally\b|\bend;)[\s\S]){0,400}?\bend;'   # ...with no finally nearby
-```
-
-And at runtime: `ReportMemoryLeaksOnShutdown` names the class. See `reference/leaks.md`.
+**Detect** `discovery.md` §2 lists every construction that is not followed by a `try`. And at runtime: `ReportMemoryLeaksOnShutdown` names the class. See `reference/leaks.md`.
 
 ---
 
@@ -101,13 +89,7 @@ shutdown report and as a service whose memory grows all day.
 **Fix** the `try/finally` goes **inside** the loop body — or, better, put them in an owning
 `TObjectList<TOrderLine>` and free that once.
 
-**Detect**
-
-```bash
-rg -n -U '(for|while)[^\n]*\bdo\b[\s\S]{0,300}?\.Create[\s\S]{0,300}?\bend;\s*\n\s*\w+\.Free'
-```
-
-Read the report for a leak count much larger than 1 — that is almost always this.
+**Detect** `discovery.md` §3. Read the report for a leak count much larger than 1 — that is almost always this.
 
 ---
 
@@ -135,12 +117,7 @@ arrives later, somewhere else.
 **Fix** on a local, plain `Free`. On a field, keep `FreeAndNil` only when something genuinely tests it for
 `nil` later — and then answer the aliasing question explicitly.
 
-**Detect**
-
-```bash
-rg -n 'FreeAndNil\s*\(\s*[lL][A-Z]'    # on an l-prefixed local
-rg -n -U 'finally[\s\S]{0,80}?FreeAndNil'
-```
+**Detect** `discovery.md` §4 (locals); list the field cases separately and read each.
 
 ---
 
@@ -166,14 +143,7 @@ scope first. Both are AVs at an unrelated later line.
 `reference/memory.md`.
 
 **Detect** — find classes that implement an interface, then look for `.Free` on a variable of that class
-type in the same unit:
-
-```bash
-rg -n 'class\s*\(\s*TInterfacedObject\s*,'      # the classes at risk
-rg -n '\.Free\b'                                 # ...and any Free in those units
-```
-
-Any overlap is a manual read. There is no compiler warning for this.
+type in the same unit (`discovery.md` §5, two steps). Any overlap is a manual read. There is no compiler warning for this.
 
 ---
 
@@ -210,11 +180,7 @@ Verified on Win32 with `dcc32` 37.0: without `[weak]` the pair leaks and neither
 `[weak]` both destructors run at the expected point.
 
 **Detect** — the shutdown report is unusually good at this one. **Two classes leaked in matching counts**
-(`TChild x 1, TParent x 1`) is the signature. Then:
-
-```bash
-rg -n -U 'class\s*\([^)]*TInterfacedObject[^)]*\)[\s\S]{0,400}?f\w+\s*:\s*I[A-Z]\w+'
-```
+(`TChild x 1, TParent x 1`) is the signature. Then `discovery.md` §6 lists the interface-typed fields.
 
 Interface-typed *fields* are where cycles live. Closure-captured `Self` is the same bug with a different
 face — `delphi`, `reference/generics-and-rtti.md`.
@@ -243,12 +209,8 @@ have the caller pass in the container to fill (`procedure FillInto(ATarget: TStr
 return an object, **say so in the name** — `CreateX`, `ExtractX` — the way the RTL does with
 `TObjectList<T>.Extract`.
 
-**Detect**
-
-```bash
-rg -n -U 'function\s+\w+(\.\w+)?\([^)]*\)\s*:\s*T[A-Z]\w+;[\s\S]{0,200}?Result\s*:=\s*T\w+\.Create'
-rg -n '\.\w+\([^)]*\)\.\w+'        # method call chained straight off a call - candidate leaked temporary
-```
+**Detect** `discovery.md` §7: the functions, then their call sites. A method call chained straight off a
+call is a candidate leaked temporary.
 
 ---
 
@@ -268,12 +230,7 @@ objects hides their lifetimes inside itself, so nothing else in the report is tr
 **Fix** free it in the same unit's `finalization`. If it genuinely must outlive shutdown, call
 `RegisterExpectedMemoryLeak` on it so the report stays clean and the decision is written down.
 
-**Detect**
-
-```bash
-rg -n -U 'initialization[\s\S]{0,400}?\.Create[\s\S]*?\bend\.'   # then check for a finalization
-rg -n -c 'finalization'
-```
+**Detect** `discovery.md` §8: creation in `initialization`, then the units that have no `finalization`.
 
 ---
 
@@ -304,18 +261,14 @@ begin
 end;
 ```
 
+That fix compiles on 37.0. The `TMethod(...)` cast is an unsafe cast, so a bare `-W` prints `W1048` on that
+line; it is the cast you meant, not a defect.
+
 For components, `TComponent.FreeNotification` / `RemoveFreeNotification` (`System.Classes`) is the built-in
 version of the same idea: the referencing component is told through `Notification(…, opRemove)` when the
 target dies.
 
-**Detect**
-
-```bash
-rg -n ':=\s*(Self\.)?\w*(Handle|On)\w*;'      # assignments of a method to an event property
-rg -n 'On[A-Z]\w*\s*:=\s*\w+;'
-```
-
-For each hit, check the owning class's destructor for the matching `:= nil`. Absence is the finding.
+**Detect** `discovery.md` §9 (assignments of a method to another object's event). For each hit, check the owning class's destructor for the matching `:= nil`. Absence is the finding.
 
 ---
 
@@ -336,12 +289,7 @@ though it had. Every downstream symptom will be investigated in the wrong place.
 
 **Fix** handle one named class and say why, or log and re-`raise` with a bare `raise`.
 
-**Detect**
-
-```bash
-rg -n -U 'except\s*(//[^\n]*\n\s*)*end'
-rg -n -U 'except[\s\S]{0,40}?\bend\b'          # near-empty handlers too
-```
+**Detect** `discovery.md` §10, including the `on E: … do ;` form.
 
 ---
 
@@ -368,13 +316,7 @@ on an owning list, `OKResponse(lObj)` in DMVCFramework. There `except Free; rais
 (`delphi` skill, `reference/memory.md`); turning it into `finally` frees an object the new owner will free
 again. The smell is `except Free; raise` followed by **more use** of the object and no handoff.
 
-**Detect**
-
-```bash
-rg -n -U 'except[\s\S]{0,120}?\.Free'
-```
-
-Every hit is either this bug or a deliberate and unusual construction. Read all of them.
+**Detect** `discovery.md` §11. Every hit is either this bug or a deliberate and unusual construction. Read all of them.
 
 ---
 
@@ -401,11 +343,7 @@ leaks silently every time.
 handler skip the release, and never let the destructor raise (an exception escaping a `finally` replaces
 the one in flight — `delphi`, `reference/exceptions.md`).
 
-**Detect**
-
-```bash
-rg -n -U 'destructor[\s\S]{0,400}?except\s*(//[^\n]*\n\s*)*end'
-```
+**Detect** `discovery.md` §12.
 
 ---
 
@@ -447,12 +385,8 @@ Verified with `dcc32` 37.0: a function called as a statement produces **no diagn
 
 **Fix** branch on it. That is what it is for.
 
-**Detect** — the compiler will not help, so grep for the known offenders at statement position:
-
-```bash
-rg -n '^\s*(TryStrTo\w+|TryEncode\w+|Supports)\s*\(' 
-rg -n '^\s*\w+\.(Wait|TryEnter|TryGetValue|Extract)\s*\('
-```
+**Detect** — the compiler will not help, so search for the known offenders at statement position
+(`discovery.md` §14).
 
 ---
 
@@ -470,14 +404,7 @@ nothing checks it, and the day someone inserts a state the code silently ships c
 **Fix** a scoped enumeration, or at minimum a named constant. `delphi`, `reference/style.md` for the
 naming.
 
-**Detect**
-
-```bash
-rg -n '(State|Status|Kind|Mode|Result|Code)\w*\s*(=|<>|:=)\s*-?\d+'
-rg -n 'case\s+\w+\s+of[\s\S]{0,200}?^\s*\d+\s*:'
-```
-
-Ignore `0`, `1` and `-1` used as counts or indexes; the finding is a domain value written as a bare integer.
+**Detect** `discovery.md` §15, including case labels. Ignore `0`, `1` and `-1` used as counts or indexes; the finding is a domain value written as a bare integer.
 
 ---
 
@@ -500,13 +427,7 @@ the names either.
 
 **Fix** a local variable. Never generate `with` in new code.
 
-**Detect**
-
-```bash
-rg -n '\bwith\b[^\n]*\bdo\b'
-```
-
-Nested `with`s (`with A, B do`) are the acute form — report those first.
+**Detect** `discovery.md` §16. Nested `with`s (`with A, B do`) are the acute form — report those first.
 
 ---
 
@@ -548,11 +469,7 @@ difference between milliseconds and a hang the user reports as a freeze.
 **Fix** `TStringBuilder` (`System.SysUtils`), or `TStringList.Add` plus `.Text` when the pieces are lines.
 Below a few hundred appends it does not matter; do not "fix" those.
 
-**Detect**
-
-```bash
-rg -n -U '(for|while)[^\n]*\bdo\b[\s\S]{0,200}?(\w+)\s*:=\s*\2\s*\+'
-```
+**Detect** `discovery.md` §18.
 
 ---
 
@@ -584,12 +501,7 @@ machine. A `TTimer` handler is main-thread and is fine; a `TThread` or a `TTask`
 TControl.RaiseOnNonMainThreadUsage := True;    // in the debug build
 ```
 
-then grep the bodies:
-
-```bash
-rg -n -U 'procedure\s+\w+\.Execute;[\s\S]{0,800}?(Label|Edit|Memo|Grid|Progress|Form|Application|Screen)\w*\.'
-rg -n -U 'TTask\.(Run|Create)[\s\S]{0,400}?(Label|Edit|Memo|Form)\w*\.'
-```
+then search the bodies (`discovery.md` §19).
 
 ---
 
@@ -614,18 +526,11 @@ else and crashes elsewhere. With `FreeOnTerminate := True` the thread reference 
 destructor), or capture only values the closure can own. `TThread.RemoveQueuedEvents` in the destructor for
 anything already queued.
 
-**Detect**
-
-```bash
-rg -n 'FreeOnTerminate\s*:=\s*True'
-```
-
+**Detect** `discovery.md` §20. Note that `CreateAnonymousThread` sets `FreeOnTerminate := True` itself
+(`TAnonymousThread.Create`, `System.Classes.pas`, same in 23.0 and 37.0), so the assignment need not appear.
 For each hit: is the thread variable used after `Start`? Does the closure capture a field or `Self`? Both
-are findings. Then check every destructor of a class that owns a thread for a `Terminate` + `WaitFor` pair:
-
-```bash
-rg -n -U 'destructor[\s\S]{0,400}?fThread' 
-```
+are findings. Then check every destructor of a class that owns a thread for a `Terminate` + `WaitFor` pair;
+the second step of §20 lists the units that start threads and never call `WaitFor`.
 
 ---
 

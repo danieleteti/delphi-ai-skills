@@ -44,6 +44,10 @@ if not exist "!RULES!" mkdir "!RULES!" || (echo [ERROR] Could not create "!RULES
 :: NOTE: one line per skill - add a line here when a skill is added to skills\.
 call :rule delphi                    "Delphi / Object Pascal language and RTL - version gating, memory and lifetime, strings, generics, RTTI, threading"
 call :rule delphi-code-smells        "Delphi code review - compiler warnings and hints, static analysis, memory leak detection, code smells"
+call :rule delphi-build              "building Delphi projects from the command line - msbuild, dcc32/dcc64, warnings as errors, exit codes"
+call :rule delphi-firedac            "FireDAC in plain Delphi - connections, pooling, transactions, parameters and macros, cached updates"
+call :rule delphi-security           "secure coding for desktop, service and client code - hashing, random, TLS, paths, secrets, logs"
+call :rule delphi-testing            "unit tests with DUnitX - fixtures, attributes, assertions, CI exit codes, leak detection"
 call :rule dmvcframework             "DelphiMVCFramework core - controllers, ActiveRecord, validation, DI, middleware, servers, dotEnv"
 call :rule dmvcframework-minimal-api "DelphiMVCFramework Minimal API - lambda routes, route groups, endpoint and HTTP filters"
 call :rule dmvcframework-webapp      "DelphiMVCFramework web app - TemplatePro views, HTMX fragments, ViewData, cookie auth"
@@ -52,6 +56,7 @@ call :rule dmvcframework-security    "DelphiMVCFramework security - access contr
 call :rule dmvcframework-jsonrpc     "DelphiMVCFramework JSON-RPC 2.0 - publishing a service, requests vs notifications, params, errors, the client"
 call :rule dmvcframework-testing     "DelphiMVCFramework testing - DUnitX, in-process IMVCServer, IMVCRESTClient"
 call :rule htmx-skill                "htmx reference - attributes, triggers, swap modifiers, events, headers, extensions"
+call :rule exewatch-delphi           "ExeWatch Delphi SDK - initialization, logging, device info, offline buffering, stack traces"
 
 echo.
 echo Done. Rules written to .cursor\rules\ - Cursor pulls each one in when it is relevant.
