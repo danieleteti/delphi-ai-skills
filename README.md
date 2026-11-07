@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/skills-0.3.0-fbbf24" alt="skills version 0.3.0">
+  <img src="https://img.shields.io/badge/skills-0.4.0-fbbf24" alt="skills version 0.4.0">
   <img src="https://img.shields.io/badge/Delphi-11%20Alexandria%2B-1a1a1a" alt="Delphi 11 Alexandria and later">
   <img src="https://img.shields.io/badge/DelphiMVCFramework-3.5.x-1a1a1a" alt="targets DelphiMVCFramework 3.5.x">
   <img src="https://img.shields.io/badge/license-Apache--2.0-1a1a1a" alt="Apache 2.0">
@@ -33,7 +33,7 @@ inventing plausible-but-wrong code. Every identifier was copied from the shipped
 the DelphiMVCFramework sources and samples, never written from memory, and a
 [checker](#checking-the-skills-themselves) re-verifies all of them on every change.
 
-**Version 0.3.0 — early release.** Verified against **Delphi 13 Florence's RTL** (targeting **11 Alexandria**
+**Version 0.4.0 — early release.** Verified against **Delphi 13 Florence's RTL** (targeting **11 Alexandria**
 and later) and **DelphiMVCFramework 3.5.0** (`silicon`), but not yet battle-tested across many projects:
 expect rough edges, and please report them.
 
@@ -494,7 +494,7 @@ re-running the same task to confirm the agent gets it right.
 
 | | |
 |---|---|
-| **Skills version** | **0.3.0** (pre-1.0) |
+| **Skills version** | **0.4.0** (pre-1.0) |
 | **Targets DelphiMVCFramework** | **3.5.x** (`silicon`) — branch `dmvc-3.5` |
 | **Verified against** | Delphi 13 Florence (and 12 Athens where a skill says so), DelphiMVCFramework 3.5.0, ExeWatch Delphi SDK 0.25.0 |
 | Delphi | The framework supports 10.2 Tokyo and later; the wizard projects these skills assume target 11 Alexandria or later |
@@ -554,7 +554,7 @@ compiler, and an ownership bug needs to be run. See CLAUDE.md for the two levels
 
 ### Changelog
 
-**Unreleased** — five skills added, fifteen in total.
+**0.4.0** — five skills added, fifteen in total.
 
 - **`delphi-firedac`** — FireDAC in plain Delphi: the `uses` set for a non-visual program, connection definitions
   and pooling, transactions (a connection closed with an open transaction *commits*), parameters and macros
