@@ -13,8 +13,8 @@ HTMX docs: https://htmx.org/docs/
 layer that underpins every web application. If the user asks about controllers, entities,
 JWT middleware configuration, or engine setup beyond what is in this skill, invoke `dmvcframework`.
 
-**COMPANION SKILL (on demand):** `htmx-skill` — indexes every page of the official htmx.org
-documentation. For any attribute, trigger/swap modifier, event, header or extension beyond the few
+**COMPANION SKILL (on demand):** `htmx-skill` — indexes the htmx 2.x reference pages
+(attributes, events, headers, extensions, examples). For any attribute, trigger/swap modifier, event, header or extension beyond the few
 patterns in Section 7, invoke it and read the linked page. Do not write HTMX from memory.
 
 **COMPANION SKILL (on demand):** `dmvcframework-ui` — the presentation layer the wizard generates:
@@ -484,7 +484,7 @@ dmvc.view_cache=false   # set to true in production for performance
 HTMX is loaded in `baselayout.html`; child templates need no setup.
 
 **For any attribute, trigger modifier, swap mode, event or extension: invoke the `htmx-skill` and read
-the linked htmx.org page.** It indexes every page of the official docs. Do not write HTMX attributes
+the linked htmx page.** It indexes the htmx 2.x reference pages. Do not write HTMX attributes
 from memory — inheritance rules and swap/trigger modifiers are easy to get subtly wrong. What follows is
 only the handful of patterns that carry a *Delphi-side* implication.
 

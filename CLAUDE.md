@@ -35,8 +35,18 @@ skills/<skill-name>/SKILL.md          one skill; frontmatter + body
 skills/dmvcframework/reference/*.md   heavy material the agent opens on demand
 skills/*/scripts/*.bat                build/run helpers shipped with a skill
 install_in_{claude,codex,cursor,gemini}.bat
+tools/gen_htmx_index.py               regenerates skills/htmx-skill/SKILL.md (not shipped)
 docs/logo.png
 ```
+
+`skills/htmx-skill/SKILL.md` is **generated**, not hand-edited: clone htmx at a `v2.x.y` tag and run
+`python -I tools/gen_htmx_index.py <clone>`, then `python check.py --urls` (the one check that needs the
+network: every link must answer 200). Descriptions are htmx's own (0BSD); the lines htmx does not provide
+live in `MANUAL` inside the script. Nobody reruns it by hand: `.github/workflows/htmx-skill.yml` runs
+`--latest` weekly on `main` and `dmvc-3.5`, commits only if `check.py --urls` passes, and opens an issue when
+it cannot (a new htmx page with no description needs a `MANUAL` line). Keep `check.py --urls` on both
+branches: the workflow refuses to run a branch that lacks it. GitHub disables scheduled workflows after 60
+days without repository activity; a banner in the Actions tab means re-enabling it.
 
 `skills/dmvcframework` is the core; the others (`-minimal-api`, `-webapp`, `-ui`, `-security`, `-jsonrpc`,
 `-testing`, plus `htmx-skill`) build on it and cross-reference it by skill name.

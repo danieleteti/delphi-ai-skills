@@ -1,0 +1,69 @@
+name: htmx-skill
+
+# Keeps skills/htmx-skill/SKILL.md on the newest htmx 2.x release without anyone remembering to.
+# Weekly: if htmx published a newer v2.x.y tag, regenerate the file on main AND on dmvc-3.5 (the branch
+# the DMVC wizard downloads), run the URL check, and commit only if everything passed. Any failure
+# opens an issue instead, so it never goes unnoticed and never publishes a half-checked file.
+#
+# The schedule runs from the default branch's copy of this file. GitHub disables scheduled workflows in a
+# public repository after 60 days without repository activity: if the Actions tab shows a banner, re-enable it.
+
+on:
+  schedule:
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        branch: [main, dmvc-3.5]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.branch }}
+          path: target
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Regenerate (no-op when already on the newest v2.x.y)
+        run: python -I main/tools/gen_htmx_index.py --latest --out target/skills/htmx-skill/SKILL.md
+
+      - name: Gate - the branch must have the URL check, then every link must answer 200
+        run: |
+          grep -q -- '--urls' target/check.py || { echo "target/check.py has no --urls: the gate would silently not run"; exit 1; }
+          python target/check.py --urls
+
+      - name: Commit and push if the file changed
+        run: |
+          cd target
+          git diff --quiet -- skills/htmx-skill/SKILL.md && { echo "nothing to commit"; exit 0; }
+          tag=$(grep -o 'generated from the `v2\.[0-9]*\.[0-9]*`' skills/htmx-skill/SKILL.md | grep -o 'v2\.[0-9.]*')
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(htmx-skill): regenerate for htmx ${tag#v}" -- skills/htmx-skill/SKILL.md
+          git push origin "HEAD:${{ matrix.branch }}"
+
+      - name: Open an issue on failure (once per branch)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="htmx skill refresh failed on ${{ matrix.branch }}"
+          gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$title\" in:title" --json number --jq 'length' | grep -qx 0 || exit 0
+          gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" \
+            --body "The scheduled refresh stopped. Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+
+          Typical causes: htmx added a page with no description (add a line to MANUAL in tools/gen_htmx_index.py), a link now answers 404, or the branch has no check.py --urls."
