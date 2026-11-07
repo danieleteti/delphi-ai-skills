@@ -201,6 +201,26 @@ def check_coverage(names):
                 fail(fn, 'does not list the %r skill' % name)
 
 
+def check_htmx_urls():
+    """Opt-in (python check.py --urls): needs the network. Every link in the htmx index must answer 200."""
+    import urllib.request
+    from concurrent.futures import ThreadPoolExecutor
+    urls = sorted({u.rstrip('.,;') for u in re.findall(
+        r'https://v2\.htmx\.org/[^\s)`]*', read(os.path.join(SKILLS, 'htmx-skill', 'SKILL.md')))})
+
+    def status(url):
+        try:
+            return url, urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent': 'check.py'}),
+                                               timeout=30).status
+        except Exception as e:  # HTTPError, URLError, timeout: all mean the link is not usable
+            return url, getattr(e, 'code', type(e).__name__)
+    with ThreadPoolExecutor(8) as pool:
+        for url, code in pool.map(status, urls):
+            if code != 200:
+                fail('skills/htmx-skill/SKILL.md', '%s answered %s' % (url, code))
+    print('%d htmx URLs requested.' % len(urls))
+
+
 def main():
     names = skill_dirs()
     if not names:
@@ -219,6 +239,9 @@ def main():
         declared = declared_in_docs()
         for name in names:
             check_identifiers(name, tokens, declared)
+
+    if '--urls' in sys.argv:
+        check_htmx_urls()
 
     print('%d skills checked.' % len(names))
     if problems:

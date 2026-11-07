@@ -96,7 +96,7 @@ The agent reads the project, loads the right skills, and writes code against the
 | **`dmvcframework-security`** | Secure coding, with the DMVCFramework API that implements each control: access control and IDOR, mass assignment, SQL injection, XSS in TemplatePro, CSRF, path traversal, uploads, SSRF and open redirect, security headers, JWT hardening, secrets. | Automatically — the server skills require it for any endpoint that takes client input. |
 | **`dmvcframework-jsonrpc`** | JSON-RPC 2.0 services: publishing a controller, which methods are callable, `function` = request vs `procedure` = notification, named and positional parameters, who frees what, error codes, hooks, and the `IMVCJSONRPCExecutor` client. | Expose or consume a JSON-RPC endpoint. |
 | **`dmvcframework-testing`** | Integration and unit tests: an in-process `IMVCServer` + `IMVCRESTClient` + DUnitX; CRUD, authentication and authorization test patterns; database fixtures. | Write tests for a DMVCFramework API. |
-| **`htmx-skill`** | An index of every page of the official htmx.org documentation, each with a description, so the agent fetches and reads the right page instead of recalling htmx from memory. | Ask about any htmx attribute, trigger/swap modifier, event, header or extension. |
+| **`htmx-skill`** | An index of the htmx **2.x** reference pages (generated from the 2.0.11 docs), each with a description, so the agent fetches and reads the right page instead of recalling htmx from memory. | Ask about any htmx attribute, trigger/swap modifier, event, header or extension. |
 
 They are complementary: the Minimal API, web-app and JSON-RPC skills assume the core one for entities,
 validation and DI, and all of them sit on `delphi` for the language itself. Every server skill requires
