@@ -178,8 +178,9 @@ states which DelphiMVCFramework release the content was verified against. Update
 materially.
 
 **Branches follow the framework's major.minor.** `main` is the line in development; `dmvc-3.5`, `dmvc-3.6`, …
-are cut from `main` when that framework release ships and then take **corrections only** (an API described
-wrongly), cherry-picked from `main` — never new skills or coverage. The DMVC IDE wizard downloads
+are cut from `main` when that framework release ships and then take **corrections** (an API described
+wrongly), cherry-picked from `main`; new skills or coverage go there only when the maintainer asks for them
+in that line (the five Delphi-level skills and `exewatch-delphi` were added to `dmvc-3.5` that way). The DMVC IDE wizard downloads
 `archive/refs/heads/dmvc-<major>.<minor>.zip`, so a branch's head is what users of that line get: never
 force-push one, and never merge `main` into it.
 
