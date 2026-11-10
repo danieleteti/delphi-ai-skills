@@ -148,7 +148,10 @@ still in memory. Full rules:
 | `reference/server-and-targets.md` | web server, service, per-request pattern, one instance per tenant, DMVC, WebBroker, DLL route, packages, Linux, Android, FMX |
 
 For DelphiMVCFramework servers, load the `dmvcframework` skill for controllers, filters and the exception
-handler; this skill covers only the ExeWatch calls.
+handler; this skill covers only the ExeWatch calls. In DMVC 3.5 ExeWatch is a LoggerPro appender (the wizard's
+box) and the framework has no ExeWatch API. An error line arrives with the stack of where it happened (the
+raise, for an exception): nothing to add in the exception handler. Details and limits:
+`reference/server-and-targets.md`.
 
 ## What not to do
 

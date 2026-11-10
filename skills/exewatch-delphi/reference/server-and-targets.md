@@ -91,12 +91,47 @@ Compiled and run: two tenants wrote to `inst01\ACME` and `inst01\GLOBEX` and arr
 Sample folders in the samples repository: `DelphiDMVCFramework`, `DelphiWebBroker`,
 `DelphiSDKSingleProcessMultiTenant`. What they do (read):
 
-- DMVC: initialize in the `.dpr`; forward the framework's LoggerPro output to `EW.Log(Level, Msg, Tag,
+- DMVC, the sample: initialize in the `.dpr`; forward the framework's LoggerPro output to `EW.Log(Level, Msg, Tag,
   Timestamp, ThreadId)` so no controller changes are needed (`TLogType` in `LoggerPro.pas` has the same
   order as `TEWLogLevel`, 0 to 4, which the sample's `TEWLogLevel(Ord(...))` cast relies on); call
   `EW.ErrorWithException(E, 'unhandled')` in the engine's exception handler; `FlushExeWatch` (which is
   `EW.WaitForSending(5)`) after the server stops. Forwarding the logger and logging in the handler can report
   one failure twice: check the dashboard.
+
+### DelphiMVCFramework 3.5: ExeWatch is a LoggerPro appender
+
+In a DMVC 3.5 project ExeWatch is configured as an appender, like Console or File, and in no other way: the framework
+has no ExeWatch API. What is specific to ExeWatch (breadcrumbs, timings, counters, `ErrorWithException`) is this
+SDK, called from the project's own code. Checked on DMVC 3.5.0-silicon-rc10, Delphi 13 Win32, against a local HTTP
+listener (run).
+
+- The wizard's ExeWatch box adds `LoggerPro.ExeWatchAppender` (in `lib/loggerpro`, not in the LoggerPro package)
+  with `WithExeWatch(lBuilder).WithAPIKey(...).WithCustomerId(...).WithAppVersion(...).Done`. The key is
+  `exewatch.apikey` in `bin\.env`, and the appender is added only when it starts `ew_`: a key that does not raises
+  from `InitializeExeWatch`, and the generated server would stop at its first start. Customer id defaults to the name
+  of the program (an empty one keeps every event in memory). Without the box the project has no ExeWatch code.
+- With the JSON logging profile the wizard adds the appender by code after the file, not as a block of
+  `loggerpro.json`: the file is committed, `.env` is not (the generated `.gitignore`). An `ExeWatch` block written by
+  hand still works: the unit registers the appender type.
+- **An error carries the stack of where it happened.** The appender writes from LoggerPro's own thread, so it
+  installs a LoggerPro capture hook (`ILoggerProBuilder.WithCapture`, `ExeWatchCapture`) that runs on the thread
+  that logs. An error logged while an exception is being handled (inside an `except` block, or `LogException`)
+  carries the stack of the raise: an action that raises arrives as one event, the engine's log line, with
+  `stack_trace` starting at the action (run, Win32 and Win64, read back from ExeWatch with the map linked:
+  `ControllersU.TTestController.Boom (line 37)`, `symbol_source: embedded`). Any other error carries the stack of
+  the place that logged it, without the frames of LoggerPro. The event has the time and the thread of the log line.
+  `WithExeWatch(...)` installs the hook; with `NewExeWatchAppender` add `.WithCapture(ExeWatchCapture)`.
+- Nothing to add for exceptions: no `EW.ErrorWithException` in `SetExceptionHandler` (it would report the failure
+  twice). Limits: no `exception_class` field (the class is in the text of the log line) and the breadcrumbs of the
+  request are not attached.
+- An error logged in the first moments of the process can arrive with unresolved frames
+  (`Module.exe!...+0x...`, `symbol_source: none`); a few seconds later they resolve (run).
+- The SDK ships every few seconds (`flush_interval_ms`, 7000 in the run): a server that ends right after an error
+  must wait, `EW.WaitForSending(20)`, or the events stay in the pending folder until the next start.
+- **`SetDefaultLogger` is ignored when a default logger already exists** (run, `MVCFramework.Logger`): the first
+  `dotEnv.Env(...)` on the default dotEnv logs, and that creates it. The generated project configures dotEnv without a
+  logger (`dotEnvConfigure`, no `.UseLogger`) and then the logger; do the same by hand, or the ExeWatch appender is
+  never installed and nothing reaches ExeWatch.
 - WebBroker: the web module wraps each endpoint in a handler like `HandleRequest` above.
 - ISAPI or an Apache module is a DLL: the SDK suppresses the GUI warning when `IsLibrary` (read). Initialize
   once per process from the module's start-up, never per request.
