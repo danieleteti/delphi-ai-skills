@@ -66,6 +66,7 @@ if exist "!GEM!" (
 >>"!GEM!" echo - `skills/dmvcframework-ui/SKILL.md` — Bootstrap 5.3 layout, style.css, dark mode
 >>"!GEM!" echo - `skills/dmvcframework-security/SKILL.md` — REQUIRED for any endpoint taking client input
 >>"!GEM!" echo - `skills/dmvcframework-jsonrpc/SKILL.md` — JSON-RPC 2.0 services and client
+>>"!GEM!" echo - `skills/dmvcframework-mcp/SKILL.md` — MCP tools, resources and prompts (mcp-server-delphi)
 >>"!GEM!" echo - `skills/dmvcframework-testing/SKILL.md` — DUnitX integration tests
 >>"!GEM!" echo - `skills/htmx-skill/SKILL.md` — index of the htmx 2.x reference pages
 >>"!GEM!" echo - `skills/exewatch-delphi/SKILL.md` — ExeWatch Delphi SDK: initialization, logging, device info, offline buffering, stack traces

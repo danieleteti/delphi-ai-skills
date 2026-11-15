@@ -99,6 +99,7 @@ The agent reads the project, loads the right skills, and writes code against the
 | **`dmvcframework-ui`** | The presentation layer the wizard generates: Bootstrap 5.3, `baselayout.html` blocks, the brand tokens in `style.css`, dark/light mode via `data-bs-theme`, toasts, the HTMX activity classes. | Write markup or CSS for a DMVCFramework web app. |
 | **`dmvcframework-security`** | Secure coding, with the DMVCFramework API that implements each control: access control and IDOR, mass assignment, SQL injection, XSS in TemplatePro, CSRF, path traversal, uploads, SSRF and open redirect, security headers, JWT hardening, secrets. | Automatically — the server skills require it for any endpoint that takes client input. |
 | **`dmvcframework-jsonrpc`** | JSON-RPC 2.0 services: publishing a controller, which methods are callable, `function` = request vs `procedure` = notification, named and positional parameters, who frees what, error codes, hooks, and the `IMVCJSONRPCExecutor` client. | Expose or consume a JSON-RPC endpoint. |
+| **`dmvcframework-mcp`** | MCP tools, resources and prompts in a project generated with the wizard's MCP Server preset or MCP options, on the mcp-server-delphi library: attributes and parameter types, result helpers and who frees what, `TMCPToolResult.Error` versus an exception, annotations as hints, the caller's identity, resource templates, prompts, who may call the server, stdio and HTTP, the REST bridge. | Add tools, resources or prompts to a wizard MCP server. |
 | **`dmvcframework-testing`** | Integration and unit tests: an in-process `IMVCServer` + `IMVCRESTClient` + DUnitX; CRUD, authentication and authorization test patterns; database fixtures. | Write tests for a DMVCFramework API. |
 | **`htmx-skill`** | An index of the htmx **2.x** reference pages (generated from the 2.0.11 docs), each with a description, so the agent fetches and reads the right page instead of recalling htmx from memory. | Ask about any htmx attribute, trigger/swap modifier, event, header or extension. |
 | **`exewatch-delphi`** | The ExeWatch Delphi SDK (0.25.0): initialization, logging, user and device information, offline buffering, stack traces, server-side use. | Add or fix ExeWatch in a Delphi app. |
@@ -238,6 +239,14 @@ file, so it is listed first: it is what keeps the agent from writing C# in Pasca
 > *Return a proper JSON-RPC error with a custom code instead of a 500*
 > *Who frees the object I return from an RPC method?*
 
+**`dmvcframework-mcp`** — MCP tools, resources and prompts, in a wizard MCP project
+
+> *Add an MCP tool that searches the customers table, with an optional limit*
+> *Add a tool that cancels an order and tells the model when the order does not exist*
+> *Expose each order as an MCP resource orders://{id}*
+> *Only admins may call the delete tool: how do I enforce that?*
+> *Why does my tool return "Internal server error" in the Release build?*
+
 **`exewatch-delphi`** — the ExeWatch SDK, for projects that use it
 
 > *Add ExeWatch to this VCL app: initialize it, log errors and send stack traces*
@@ -359,6 +368,7 @@ Before writing Delphi or DelphiMVCFramework code, read the relevant skill:
 - `skills/dmvcframework-ui/SKILL.md` — Bootstrap 5.3 layout, style.css, dark mode
 - `skills/dmvcframework-security/SKILL.md` — REQUIRED for any endpoint taking client input
 - `skills/dmvcframework-jsonrpc/SKILL.md` — JSON-RPC 2.0 services and client
+- `skills/dmvcframework-mcp/SKILL.md` — MCP tools, resources and prompts (mcp-server-delphi)
 - `skills/dmvcframework-testing/SKILL.md` — DUnitX integration tests
 - `skills/htmx-skill/SKILL.md` — index of the htmx 2.x reference pages
 - `skills/exewatch-delphi/SKILL.md` — ExeWatch Delphi SDK: initialization, logging, device info, offline buffering, stack traces
@@ -436,6 +446,7 @@ skills/
   dmvcframework-jsonrpc/
     SKILL.md
     reference/client.md             IMVCJSONRPCExecutor: calls, notifications, ownership
+  dmvcframework-mcp/SKILL.md        MCP tools, resources, prompts (mcp-server-delphi): errors, transports, security
   dmvcframework-testing/
     SKILL.md
     scripts/run-tests.bat           build and run a DUnitX test project
@@ -547,12 +558,22 @@ characters, `name` matching the folder), every `reference/` file and sibling ski
 and in this README. It exits non-zero on the first defect, so it fits a pre-commit hook or CI.
 
 It reads `C:\DEV\dmvcframework` and your Delphi `source\` tree — override with `DMVC_HOME` and
-`DELPHI_SOURCE`. Without either it still runs, and skips the identifier check rather than failing.
+`DELPHI_SOURCE` (and `MCP_SERVER_HOME` for mcp-server-delphi). Without either it still runs, and skips the
+identifier check rather than failing.
 
 It proves a name *exists*, not that it is used correctly: a real API called with the wrong arguments needs a
 compiler, and an ownership bug needs to be run. See CLAUDE.md for the two levels above this one.
 
 ### Changelog
+
+**Unreleased** — one skill added, sixteen in total.
+
+- **`dmvcframework-mcp`** — MCP tools, resources and prompts in a project generated with the wizard's MCP Server
+  preset or MCP options, on the mcp-server-delphi library (verified against 0.10.0; the features that need
+  more than 0.9.0 are marked): attributes and supported parameter types, optional arguments, result helpers and
+  who frees what, `TMCPToolResult.Error` versus an exception (and what each looks like on stdio and HTTP, Debug
+  and Release), annotations as hints, the caller's identity on HTTP, resource templates, prompts, who may call
+  the server, the stdio and HTTP transports, the REST bridge.
 
 **0.4.0** — five skills added, fifteen in total.
 

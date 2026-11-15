@@ -37,10 +37,15 @@ STUDIO_TREES = [p for p in (os.environ.get('DELPHI_SOURCE') or '').split(';') if
 # The ExeWatch SDK: the exewatch-delphi skill is checked against it (EXEWATCH_HOME overrides the folder).
 EXEWATCH = os.environ.get('EXEWATCH_HOME', r'C:\DEV\ExeWatch\SDK')
 
+# mcp-server-delphi, the external library behind the wizard's MCP option: dmvcframework-mcp is checked
+# against its sources (MCP_SERVER_HOME overrides the folder).
+MCP_SERVER = os.environ.get('MCP_SERVER_HOME', r'C:\DEV\mcp-server-delphi')
+
 SOURCE_DIRS = [os.path.join(DMVC, d) for d in ('sources', 'samples', 'ideexpert', 'lib')] + \
               [os.path.join(s, d) for s in STUDIO_TREES
                for d in ('rtl', 'vcl', 'data', 'DunitX', 'internet')] + \
-              [os.path.join(EXEWATCH, d) for d in ('Delphi', 'DLL')]
+              [os.path.join(EXEWATCH, d) for d in ('Delphi', 'DLL')] + \
+              [os.path.join(MCP_SERVER, 'sources')]
 
 # Skills whose prose is not Delphi at all.
 NO_DELPHI = {'htmx-skill'}
@@ -59,6 +64,10 @@ ALLOW = {
     'ICustomerService', 'TCustomerService', 'IProductService', 'TProductService',
     'TProductIn', 'TProductsController', 'TUsersController', 'TOrderLine',
     'TMyTests', 'TOrdersTests', 'TSecureTests',
+    # a frame of the example stack trace in exewatch-delphi/reference/server-and-targets.md
+    'TTestController',
+    # names dmvcframework-mcp says do NOT exist (other MCP SDKs' spellings agents reach for)
+    'MCPDestructive', 'MCPResourceTemplate', 'TMCPTool', 'TMCPContent',
 }
 
 # Fenced blocks in these languages are not Delphi and are not scanned.
@@ -69,6 +78,7 @@ NOT_DELPHI_FENCE = re.compile(
 CANDIDATE = re.compile(
     r'\b[TIE][A-Z][A-Za-z0-9_]{2,}\b'          # TFoo, IFoo, EFoo
     r'|\bMVC[A-Za-z0-9_]+\b'                   # MVCPath, MVCFromBody, MVCFramework.X
+    r'|\bMCP[A-Z][A-Za-z0-9_]+\b'              # MCPTool, MCPReadOnly (mcp-server-delphi attributes)
     r'|\b(?:fo|ea|nc|lo|bv|ht|et|rk|mv|mk|pp|st|sw)[A-Z][A-Za-z0-9]+\b')  # enum members
 
 # A type the document declares itself is an example, not a claim about the framework.
