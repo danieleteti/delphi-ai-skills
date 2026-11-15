@@ -57,7 +57,8 @@ Resources.SampleU.pas    TSampleResources (when "resources and prompts" was tick
 Prompts.SampleU.pas      TSamplePrompts
 bin/.env                 mcp.allowed_origins; mcp.auth.token (bearer token, not with the JWT option);
                          mcp.http.host (MCP Server preset)
-.mcp.json, opencode.json the stdio launch line for MCP clients (when the stdio transport is on)
+bin/.mcp.json,           the stdio launch line for MCP clients (when the stdio transport is on; older
+bin/opencode.json        projects have them in the project folder - see section 6)
 ```
 
 Read the three sample units and `EngineConfigU.pas` before writing anything, and follow them.
@@ -368,11 +369,21 @@ The library has **no per-tool permission**. Access is decided in three places, a
 
 ## 6. Running and testing
 
-- **stdio** (the MCP Server preset's default): MCP clients start `bin\<Project>.exe --transport stdio`; with the
-  stdio option on, the wizard writes `.mcp.json` (Claude Code) and `opencode.json` with that line. With
-  `MCPDefaultTransportStdio` in the `.dpr` (MCP Server preset), no `--transport` means stdio too, and the
-  program says so on stderr. In stdio mode `ConfigureEngine` does not run: nothing set up in `EngineConfigU.pas` (filters, `PublishObject`, the bridge) exists there; services registered in
+- **stdio** (the MCP Server preset's default): MCP clients start `<Project>.exe --transport stdio`; with the
+  stdio option on, the wizard writes `bin\.mcp.json` (Claude Code) and `bin\opencode.json` with that line,
+  relative to `bin\`. With `MCPDefaultTransportStdio` in the `.dpr` (MCP Server preset), no `--transport`
+  means stdio too, and the program says so on stderr. In stdio mode `ConfigureEngine` does not run: nothing
+  set up in `EngineConfigU.pas` (filters, `PublishObject`, the bridge) exists there; services registered in
   `ServicesU.pas` do.
+- **Develop from the project folder, use the server from `bin\`.** A client started where `.mcp.json` is runs
+  the executable for the whole session, and Windows locks a running exe: every rebuild then fails
+  (`Could not create output file`). So your development session has no MCP server loaded: to try a tool,
+  build and talk to `bin\<Project>.exe --transport stdio` yourself (below); the user tests the server from a
+  Claude Code or OpenCode session started in `bin\` (Claude Code asks once to approve the project server;
+  until then `claude mcp list` shows it as pending approval). A project generated before this layout has
+  `.mcp.json`
+  at the project root: if rebuilds fail with that error, suggest moving `.mcp.json` and `opencode.json` to
+  `bin\` with the command made relative (`.\\<Project>.exe`).
 - **HTTP**: `bin\<Project>.exe --transport http` serves `POST /mcp` on `dmvc.server.port`, with
   `Authorization: Bearer <mcp.auth.token>` (with the JWT option: a JWT instead). With the bearer token, the
   HTTP server refuses to start when the token is empty.
