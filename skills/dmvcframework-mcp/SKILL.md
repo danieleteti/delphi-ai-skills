@@ -10,18 +10,12 @@ The MCP API is **not** in DelphiMVCFramework. It comes from the external library
 wizard requires in the library path. Every name below is copied from its `sources/` and from the units the
 wizard generates (`Tools.SampleU.pas`, `Resources.SampleU.pas`, `Prompts.SampleU.pas`).
 
-**Verified against mcp-server-delphi 0.10.0** (`MCP_SERVER_LIBRARY_VERSION` in `MVCFramework.MCP.Types.pas`,
-commit `7b6a4c7`). The DMVCFramework 3.5 wizard accepts 0.9.0 or later, and the API grew in between:
-
-| Feature | Needs |
-|---|---|
-| Everything not listed below | 0.9.0 |
-| `[MCPReadOnly]`, `[MCPNonDestructive]`, `[MCPIdempotent]`, `[MCPClosedWorld]`, `[MCPToolTitle]` | 0.10.0 |
-| `Context`, `HasContext`, `Transport` on a provider | a 0.10.0 copy whose `MVCFramework.MCP.Types.pas` declares `HasContext` (added after the 0.10.0 tag, same version string) |
-
-Before using a feature of the table, check the project's copy of the library (the folder in the library path:
-`grep -n "MCP_SERVER_LIBRARY_VERSION\|HasContext" <library>\sources\MVCFramework.MCP.Types.pas`). If it is
-older, tell the user to update the library; do not work around it.
+**Requires the latest mcp-server-delphi from the repository (`main`)**, as the code the wizard generates does.
+This skill was verified against commit `7b6a4c7` (`MCP_SERVER_LIBRARY_VERSION = '0.10.0'` in
+`MVCFramework.MCP.Types.pas`). An older copy lacks names used here and in the generated `EngineConfigU.pas`
+(`TMCPServer.Instance.AllowedOrigins`, `HasContext`, the annotation attributes): if
+`grep -n "HasContext" <library>\sources\MVCFramework.MCP.Types.pas` finds nothing, tell the user to update the
+library from the repository; do not work around it.
 
 ## When in doubt about an API — verify it, never guess
 
@@ -61,8 +55,9 @@ EngineConfigU.pas        the guards on /mcp, then AEngine.PublishObject(... Crea
 Tools.SampleU.pas        TSampleTools = class(TMCPToolProvider)  - the sample tool "hello"
 Resources.SampleU.pas    TSampleResources (when "resources and prompts" was ticked)
 Prompts.SampleU.pas      TSamplePrompts
-bin/.env                 mcp.auth.token, mcp.allowed_origins, mcp.http.host
-.mcp.json, opencode.json the stdio launch line for MCP clients (MCP Server preset)
+bin/.env                 mcp.allowed_origins; mcp.auth.token (bearer token, not with the JWT option);
+                         mcp.http.host (MCP Server preset)
+.mcp.json, opencode.json the stdio launch line for MCP clients (when the stdio transport is on)
 ```
 
 Read the three sample units and `EngineConfigU.pas` before writing anything, and follow them.
@@ -154,7 +149,9 @@ function TOrdersTools.CancelOrder(const order_id: Integer): TMCPToolResult;
 begin
   if order_id <= 0 then
     Exit(TMCPToolResult.Error(Format('Order %d does not exist. Use find_orders to get a valid id.', [order_id])));
-  // ... cancel it
+  // check and change in ONE statement: UPDATE orders SET status = 'cancelled'
+  //   WHERE id = :id AND status = 'open'; then RowsAffected = 0 -> return Error (not found or not open).
+  // A SELECT followed by an UPDATE races with a concurrent call.
   Result := TMCPToolResult.Text(Format('Order %d cancelled', [order_id]));
 end;
 
@@ -172,11 +169,14 @@ end.
   does, what it returns, and when not to use it.
 - **Tool name: `^[a-zA-Z0-9_-]{1,128}$`** (letters, digits, `_`, `-`; no dot, no space). The MCP spec allows
   more, but OpenAI/Anthropic-compatible clients reject the *whole* tool list when one name breaks it. The
-  server only logs a warning at start-up. Names are unique case-insensitively across all providers (a
-  duplicate raises at registration).
-- **Every parameter needs `[MCPParam(description)]`** — a parameter without it raises at registration and
-  the server does not start. The JSON property name is the **Delphi parameter name** (matched
-  case-insensitively), so name parameters the way the model should write them (`order_id`, `customer`).
+  server only logs a warning (in the registry summary, see section 6). Names are unique case-insensitively
+  across all providers (a duplicate raises at registration).
+- **Every parameter needs `[MCPParam(description)]`** — a parameter without it raises at registration. The
+  JSON property name is the **Delphi parameter name** (matched case-insensitively), so name parameters the
+  way the model should write them (`order_id`, `customer`).
+- **A registration error kills the program before it starts**: registration runs in `initialization`, so
+  the executable exits at once with `Runtime error 217` and **no message**. Look for a duplicate name, a
+  parameter without `[MCPParam]`, or a resource method whose signature does not match its URI.
 - **`MCPParam` defaults to `TMCPParamPresence.Required`; `MCPPromptArg` defaults to `Optional`.** Write the
   presence explicitly when it matters.
 - **Supported parameter types: `string`, `Integer`, `Int64`, `Double`, `Boolean`.** The call converts every
@@ -186,7 +186,8 @@ end.
 - **A missing optional argument arrives as `''`, `0`, `0.0` or `False`.** There is no "not given" flag: design
   the value so that the default means "not given" (as `limit` above), or make it a `string`.
 - **A missing required argument is a protocol error** (`Missing required parameter: <name>`), raised before
-  your method runs. The check is presence only: validate ranges and formats yourself.
+  your method runs, and delivered like any exception (see *Errors*: on HTTP in a Release build the client only
+  sees `Internal server error`). The check is presence only: validate ranges and formats yourself.
 - **A new provider instance is created for every call and freed after it.** Do not keep state in fields; use
   a database, a service, or a thread-safe singleton. Calls on HTTP run concurrently.
 - **Never write to stdout** (`Writeln`, `Write`) in a provider: on stdio stdout *is* the protocol and one stray
@@ -234,6 +235,7 @@ in section 5.
 ### Who is calling — `Context` (HTTP only)
 
 ```pascal
+// implementation uses: System.SysUtils, MVCFramework.Logger (LogI)
 function TOrdersTools.CancelOrder(const order_id: Integer): TMCPToolResult;
 begin
   if HasContext and not Context.LoggedUser.Roles.Contains('admin') then
@@ -256,7 +258,7 @@ end;
 ## 3. Resources
 
 Read-only data the client can list and fetch by URI. The method signature is checked at registration (a
-mismatch stops the server):
+mismatch: `Runtime error 217` at start-up):
 
 ```pascal
 uses
@@ -274,6 +276,12 @@ type
     function GetOrder(const URI, id: string): TMCPResourceResult;
   end;
 
+implementation
+
+uses
+  System.SysUtils,
+  MVCFramework.MCP.Server;
+
 function TOrdersResources.GetOrder(const URI, id: string): TMCPResourceResult;
 begin
   Result := TMCPResourceResult.Text(URI, '{"id":' + id.ToInteger.ToString + '}', 'application/json');
@@ -287,8 +295,9 @@ end;
   garbage — the model can send anything).
 - Results: `TMCPResourceResult.Text(URI, Text, MimeType)` or `TMCPResourceResult.Blob(URI, Base64, MimeType)`;
   pass the `URI` you received.
-- A URI that matches nothing gets `Resource not found: <uri>` from the library; for an id that does not exist,
-  raise (a resource has no `isError` result).
+- A URI that matches nothing gets the error `Resource not found: <uri>` from the library (an exception, so
+  `Internal server error` on HTTP in Release); for an id that does not exist, raise (a resource has no
+  `isError` result).
 - Register with `TMCPServer.Instance.RegisterResourceProvider(TOrdersResources)`.
 
 ## 4. Prompts
@@ -309,6 +318,12 @@ type
     [MCPPromptArg('tone', 'formal or friendly; default formal', TMCPParamPresence.Optional)]
     function ExplainOrder(const Arguments: TJDOJsonObject): TMCPPromptResult;
   end;
+
+implementation
+
+uses
+  System.SysUtils,
+  MVCFramework.MCP.Server;
 
 function TOrdersPrompts.ExplainOrder(const Arguments: TJDOJsonObject): TMCPPromptResult;
 var
@@ -353,14 +368,14 @@ The library has **no per-tool permission**. Access is decided in three places, a
 
 ## 6. Running and testing
 
-- **stdio** (the MCP Server preset's default): MCP clients start `bin\<Project>.exe --transport stdio`; the
-  wizard writes `.mcp.json` (Claude Code) and `opencode.json` with that line. With `MCPDefaultTransportStdio`
-  in the `.dpr` (MCP Server preset), no `--transport` means stdio too, and the program says so on stderr. In
-  stdio mode `ConfigureEngine` does not run: nothing set
-  up in `EngineConfigU.pas` (filters, `PublishObject`, the bridge) exists there; services registered in
+- **stdio** (the MCP Server preset's default): MCP clients start `bin\<Project>.exe --transport stdio`; with the
+  stdio option on, the wizard writes `.mcp.json` (Claude Code) and `opencode.json` with that line. With
+  `MCPDefaultTransportStdio` in the `.dpr` (MCP Server preset), no `--transport` means stdio too, and the
+  program says so on stderr. In stdio mode `ConfigureEngine` does not run: nothing set up in `EngineConfigU.pas` (filters, `PublishObject`, the bridge) exists there; services registered in
   `ServicesU.pas` do.
 - **HTTP**: `bin\<Project>.exe --transport http` serves `POST /mcp` on `dmvc.server.port`, with
-  `Authorization: Bearer <mcp.auth.token>`. The HTTP server refuses to start when the token is empty.
+  `Authorization: Bearer <mcp.auth.token>` (with the JWT option: a JWT instead). With the bearer token, the
+  HTTP server refuses to start when the token is empty.
 - After adding a tool, build, then check it is listed. A quick stdio session (one JSON object per line on
   stdin; protocol `2025-03-26` needs `initialize` first):
 
@@ -371,8 +386,8 @@ The library has **no per-tool permission**. Access is decided in three places, a
 {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"cancel_order","arguments":{"order_id":0}}}
 ```
 
-  On the first request the log gets a summary (`MCP: 3 tool(s): ...`, resources, prompts) plus a warning for
-  every tool name clients would reject.
+  The log gets a registry summary (`MCP: 3 tool(s): ...`, resources, prompts) plus a warning for every tool
+  name clients would reject — on stdio when the transport starts, on HTTP at the first `/mcp` request.
 
 ## 7. The REST bridge — prototyping only
 
@@ -396,9 +411,9 @@ With the wizard's REST bridge option, `EngineConfigU.pas` ends with
 |---|---|
 | `[MCPDestructive]` | does not exist: without `[MCPNonDestructive]` a tool is already treated as destructive |
 | `[MCPTool(...)]` on a `private` / `protected` method | `public`: a private tool compiles (hint H2219) and is silently missing from `tools/list` |
-| `[MCPResourceTemplate('x://{id}')]`, `GetOrder(const URI: string)` | `[MCPResource('x://{id}', ...)]` + `GetOrder(const URI, id: string)`; a wrong signature stops the server at start-up |
+| `[MCPResourceTemplate('x://{id}')]`, `GetOrder(const URI: string)` | `[MCPResource('x://{id}', ...)]` + `GetOrder(const URI, id: string)`; a wrong signature: `Runtime error 217` at start-up |
 | `TMCPParamPresence.Required` on an `MCPPromptArg` taken as enforced | check the argument in the method |
-| a parameter without `[MCPParam]` | every parameter needs it, or the server does not start |
+| a parameter without `[MCPParam]` | every parameter needs it, or `Runtime error 217` at start-up |
 | `TDateTime`, `Currency`, an enum, a record as a tool parameter | `string` / `Integer` / `Int64` / `Double` / `Boolean` only |
 | `raise` for "not found" | `Exit(TMCPToolResult.Error('...what to do instead...'))` |
 | `lJson := TJDOJsonObject.Create; Result := TMCPToolResult.JSON(lJson);` and no `Free` | a leak: `JSON` copies; free `lJson` in `finally` |

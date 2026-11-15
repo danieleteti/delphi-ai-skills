@@ -569,8 +569,8 @@ compiler, and an ownership bug needs to be run. See CLAUDE.md for the two levels
 **Unreleased** — one skill added, sixteen in total.
 
 - **`dmvcframework-mcp`** — MCP tools, resources and prompts in a project generated with the wizard's MCP Server
-  preset or MCP options, on the mcp-server-delphi library (verified against 0.10.0; the features that need
-  more than 0.9.0 are marked): attributes and supported parameter types, optional arguments, result helpers and
+  preset or MCP options, on the latest mcp-server-delphi from its repository (verified against commit
+  7b6a4c7): attributes and supported parameter types, optional arguments, result helpers and
   who frees what, `TMCPToolResult.Error` versus an exception (and what each looks like on stdio and HTTP, Debug
   and Release), annotations as hints, the caller's identity on HTTP, resource templates, prompts, who may call
   the server, the stdio and HTTP transports, the REST bridge.
