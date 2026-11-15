@@ -132,7 +132,7 @@ step with the SDK when its public API changes.
 `skills/dmvcframework-mcp` documents the external library mcp-server-delphi, not DMVCFramework: its source of
 truth is `C:\DEV\mcp-server-delphi\sources` (`MCP_SERVER_HOME` overrides it; `check.py` reads it and also scans
 `MCP*` names, e.g. `MCPReadOnly`) plus the units the wizard generates (`Tools.SampleU.pas`, `EngineConfigU.pas`).
-It pins the library version and marks what needs more than the wizard's `MCP_LIBRARY_MIN_VERSION`. Its error
+It states that it needs the latest library from the repository and the commit it was verified against. Its error
 table was seen on a generated server (stdio, HTTP Debug and Release); re-run that when the library changes.
 
 ## Policy: skills do not advertise
