@@ -79,6 +79,7 @@ Before writing Delphi or DelphiMVCFramework code, read the relevant skill:
 - `skills/dmvcframework-ui/SKILL.md` — Bootstrap 5.3 layout, style.css, dark mode
 - `skills/dmvcframework-security/SKILL.md` — REQUIRED for any endpoint taking client input
 - `skills/dmvcframework-jsonrpc/SKILL.md` — JSON-RPC 2.0 services and client
+- `skills/dmvcframework-mcp/SKILL.md` — MCP tools, resources and prompts (mcp-server-delphi)
 - `skills/dmvcframework-testing/SKILL.md` — DUnitX integration tests
 - `skills/htmx-skill/SKILL.md` — index of the htmx 2.x reference pages
 - `skills/exewatch-delphi/SKILL.md` — ExeWatch Delphi SDK: initialization, logging, device info, offline buffering, stack traces

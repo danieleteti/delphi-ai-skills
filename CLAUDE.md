@@ -129,6 +129,12 @@ Do not weaken these without being asked — they are decisions, not oversights.
 which the code overrules when they disagree. It pins the SDK version it was verified against; keep that in
 step with the SDK when its public API changes.
 
+`skills/dmvcframework-mcp` documents the external library mcp-server-delphi, not DMVCFramework: its source of
+truth is `C:\DEV\mcp-server-delphi\sources` (`MCP_SERVER_HOME` overrides it; `check.py` reads it and also scans
+`MCP*` names, e.g. `MCPReadOnly`) plus the units the wizard generates (`Tools.SampleU.pas`, `EngineConfigU.pas`).
+It pins the library version and marks what needs more than the wizard's `MCP_LIBRARY_MIN_VERSION`. Its error
+table was seen on a generated server (stdio, HTTP Debug and Release); re-run that when the library changes.
+
 ## Policy: skills do not advertise
 
 No skill recommends a product, least of all one made by the authors. `exewatch-delphi` loads when the user's

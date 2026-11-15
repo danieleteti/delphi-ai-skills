@@ -54,6 +54,7 @@ call :rule dmvcframework-webapp      "DelphiMVCFramework web app - TemplatePro v
 call :rule dmvcframework-ui          "DelphiMVCFramework UI - Bootstrap 5.3 layout, style.css, dark mode, toasts"
 call :rule dmvcframework-security    "DelphiMVCFramework security - access control, mass assignment, SQL injection, XSS, JWT, secrets"
 call :rule dmvcframework-jsonrpc     "DelphiMVCFramework JSON-RPC 2.0 - publishing a service, requests vs notifications, params, errors, the client"
+call :rule dmvcframework-mcp         "DelphiMVCFramework MCP server - tools, resources and prompts with mcp-server-delphi, errors, transports, security"
 call :rule dmvcframework-testing     "DelphiMVCFramework testing - DUnitX, in-process IMVCServer, IMVCRESTClient"
 call :rule htmx-skill                "htmx reference - attributes, triggers, swap modifiers, events, headers, extensions"
 call :rule exewatch-delphi           "ExeWatch Delphi SDK - initialization, logging, device info, offline buffering, stack traces"

@@ -106,6 +106,14 @@ file, so it is listed first: it is what keeps the agent from writing C# in Pasca
 > *Return a proper JSON-RPC error with a custom code instead of a 500*
 > *Who frees the object I return from an RPC method?*
 
+**`dmvcframework-mcp`** — MCP tools, resources and prompts, in a wizard MCP project
+
+> *Add an MCP tool that searches the customers table, with an optional limit*
+> *Add a tool that cancels an order and tells the model when the order does not exist*
+> *Expose each order as an MCP resource orders://{id}*
+> *Only admins may call the delete tool: how do I enforce that?*
+> *Why does my tool return "Internal server error" in the Release build?*
+
 **`exewatch-delphi`** — the ExeWatch SDK, for projects that use it
 
 > *Add ExeWatch to this VCL app: initialize it, log errors and send stack traces*

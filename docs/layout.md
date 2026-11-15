@@ -32,6 +32,7 @@ skills/
   dmvcframework-jsonrpc/
     SKILL.md
     reference/client.md             IMVCJSONRPCExecutor: calls, notifications, ownership
+  dmvcframework-mcp/SKILL.md        MCP tools, resources, prompts (mcp-server-delphi): errors, transports, security
   dmvcframework-testing/
     SKILL.md
     scripts/run-tests.bat           build and run a DUnitX test project

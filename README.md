@@ -67,6 +67,7 @@ Application**. Pick a preset, compile and run it once, then start the agent **in
 | **`dmvcframework-ui`** | Bootstrap 5.3, `baselayout.html`, `style.css` tokens, dark mode, toasts | Style the web app the wizard generates |
 | **`dmvcframework-security`** | Access control, mass assignment, SQL injection, XSS, CSRF, uploads, SSRF, JWT hardening | Any endpoint that takes client input (loaded automatically) |
 | **`dmvcframework-jsonrpc`** | JSON-RPC 2.0 services, request vs notification, error codes, `IMVCJSONRPCExecutor` client | Expose or consume JSON-RPC |
+| **`dmvcframework-mcp`** | MCP tools, resources and prompts with mcp-server-delphi: parameters, results, errors, transports, who may call | Add tools to a wizard MCP server |
 | **`dmvcframework-testing`** | In-process `IMVCServer` + `IMVCRESTClient` + DUnitX, auth and database test patterns | Test a DMVCFramework API |
 | **`htmx-skill`** | Index of the htmx 2.x reference pages (release 2.0.11) | Ask about any htmx attribute, event or header |
 | **`exewatch-delphi`** | The ExeWatch Delphi SDK: initialization, logging, device info, offline buffering, stack traces | Add or fix ExeWatch in a Delphi app |

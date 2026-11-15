@@ -68,6 +68,7 @@ if exist "!AGENTS!" (
 >>"!AGENTS!" echo - `skills/dmvcframework-ui/SKILL.md` — Bootstrap 5.3 layout, style.css, dark mode
 >>"!AGENTS!" echo - `skills/dmvcframework-security/SKILL.md` — REQUIRED for any endpoint taking client input
 >>"!AGENTS!" echo - `skills/dmvcframework-jsonrpc/SKILL.md` — JSON-RPC 2.0 services and client
+>>"!AGENTS!" echo - `skills/dmvcframework-mcp/SKILL.md` — MCP tools, resources and prompts (mcp-server-delphi)
 >>"!AGENTS!" echo - `skills/dmvcframework-testing/SKILL.md` — DUnitX integration tests
 >>"!AGENTS!" echo - `skills/htmx-skill/SKILL.md` — index of the htmx 2.x reference pages
 >>"!AGENTS!" echo - `skills/exewatch-delphi/SKILL.md` — ExeWatch Delphi SDK: initialization, logging, device info, offline buffering, stack traces
