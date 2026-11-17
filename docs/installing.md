@@ -16,6 +16,7 @@ never duplicates the section it adds to your instruction file — the appended b
 |--------|--------------|
 | `install_in_claude.bat` | Installs for your user (`%USERPROFILE%\.claude\skills`). Claude Code discovers them — nothing else to configure. |
 | `install_in_claude.bat <project>` | Installs into that project's `.claude\skills\` instead, so you can commit them for your team. Pass `.` for the current folder. |
+| `install_in_claude.sh [project]` | Same as `install_in_claude.bat`, for macOS and Linux (`~/.claude/skills` without an argument). |
 | `install_in_codex.bat [project]` | Copies `skills\` into the project **and** appends a Skills section to `AGENTS.md`. |
 | `install_in_cursor.bat [project]` | Copies `skills\` **and** writes one `.cursor\rules\*.mdc` per skill (with `alwaysApply: false`, so they load only when relevant). |
 | `install_in_gemini.bat [project]` | Copies `skills\` **and** appends a Skills section to `GEMINI.md`. |

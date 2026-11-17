@@ -7,6 +7,7 @@ the task calls for them.
 ```
 check.py                          mechanical validation of every skill - see versioning.md
 install_in_claude.bat             installers - see installing.md
+install_in_claude.sh              the same for macOS / Linux
 install_in_codex.bat
 install_in_cursor.bat
 install_in_gemini.bat
